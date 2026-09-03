@@ -1,0 +1,21 @@
+# Core
+numpy
+pandas
+pillow
+matplotlib
+scikit-learn
+
+# AWS
+boto3
+sagemaker
+
+# Deep learning — descomentar el framework elegido en la fase de modelado
+# torch
+# torchvision
+# tensorflow
+
+# Notebooks
+jupyter
+
+# Testing
+pytest

@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+build/
+dist/
+*.egg
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Datos y modelos (no versionar — viven en S3)
+# Anclados a la raíz con "/" para no matchear src/data/ ni src/models/
+/data/
+*.csv
+*.jpg
+*.jpeg
+*.png
+*.npy
+*.h5
+*.pt
+*.pth
+*.ckpt
+/models/
+
+# Credenciales / config sensible
+.env
+*.pem
+config/secrets.yaml
+
+# AWS
+.aws-sam/
+
+# Claude Code (config local de la máquina)
+.claude/settings.local.json
+
+# SO / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,26 @@
+# Configuración del proyecto — completar a medida que avancen las fases
+
+aws:
+  region: us-east-1  # TBD
+  s3_bucket: TBD
+  s3_raw_prefix: raw/
+  s3_processed_prefix: processed/
+  s3_models_prefix: models/
+
+data:
+  classes: [glioma, meningioma, pituitary, notumor]
+  image_size: 150  # TBD, definir en fase de modelado según arquitectura elegida
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+
+training:
+  architecture: TBD  # efficientnet_b0 | mobilenet_v2
+  framework: TBD      # pytorch | tensorflow
+  batch_size: 32
+  epochs: TBD
+  learning_rate: TBD
+  instance_type: ml.m5.xlarge  # free tier — sin GPU, sin Spot
+
+inference:
+  endpoint_instance_type: ml.m5.xlarge
