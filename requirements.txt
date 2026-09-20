@@ -5,6 +5,9 @@ pillow
 matplotlib
 scikit-learn
 
+# EDA / descarga del dataset (Bimestre 1, Colab)
+kagglehub
+
 # AWS
 boto3
 sagemaker
