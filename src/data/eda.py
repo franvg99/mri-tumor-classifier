@@ -244,11 +244,18 @@ def graficar_distribucion_clases(df: pd.DataFrame, figsize=(11, 4)):
         axes[0].text(i, v, str(v), ha="center", va="bottom", fontsize=9)
 
     if tiene_split:
-        tabla = pd.crosstab(df["clase"], df["split_origen"])
+        # Orden explícito de columnas: pd.crosstab las devuelve alfabéticas
+        # ("testing" antes que "training"), lo que desalineaba los colores.
+        columnas = [c for c in ("training", "testing") if c in df["split_origen"].unique()]
+        tabla = pd.crosstab(df["clase"], df["split_origen"])[columnas]
         tabla.index = [ETIQUETAS.get(c, c) for c in tabla.index]
-        # Colores fijos en vez de colormap="Blues": con solo 2 categorías, el
-        # extremo más claro de esa paleta sale casi blanco sobre fondo blanco.
-        tabla.plot(kind="bar", stacked=True, ax=axes[1], color=["#4C72B0", "#B3D2E8"])
+        # Azul y naranja (contraste fuerte, no dos tonos del mismo color) más
+        # borde negro: con colormap="Blues" el segmento más claro se perdía
+        # contra el fondo blanco del gráfico.
+        tabla.plot(
+            kind="bar", stacked=True, ax=axes[1],
+            color=["#4C72B0", "#DD8452"], edgecolor="black", linewidth=0.4,
+        )
         axes[1].set_title("Desglose por carpeta original del dataset")
         axes[1].set_xlabel("")
         axes[1].tick_params(axis="x", rotation=20)
