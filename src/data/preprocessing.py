@@ -1,9 +1,9 @@
 """
 Preprocesamiento de imágenes MRI: resize y normalización.
 
-Prototipado en Google Colab (Bimestre 1); este módulo se porta luego
-al Studio Notebook de SageMaker sin modificaciones (mismo código,
-distinto entorno de ejecución).
+Prototipado local (Bimestre 1); este módulo se porta luego al Studio
+Notebook de SageMaker sin modificaciones (mismo código, distinto
+entorno de ejecución).
 """
 
 

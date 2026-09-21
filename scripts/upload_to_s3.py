@@ -1,7 +1,7 @@
 """
 Sube el dataset descargado de Kaggle al bucket S3 (raw/).
 
-Uso previsto (Bimestre 1, desde Colab o localmente):
+Uso previsto (Bimestre 1, desde el entorno local):
     python scripts/upload_to_s3.py --local-dir ./data/raw --bucket <bucket> --prefix raw/
 
 TODO: implementar en fase de ingesta de datos (Bimestre 1), usando

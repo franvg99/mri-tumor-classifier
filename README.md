@@ -16,7 +16,7 @@ Clasificar imágenes MRI cerebrales 2D en 4 categorías:
 
 ## Stack tecnológico
 
-- **Prototipado (Bimestre 1):** Google Colab (GPU gratuita), Python, PyTorch/TensorFlow (a definir en fase de modelado)
+- **Prototipado (Bimestre 1):** entorno local, Python, PyTorch/TensorFlow (a definir en fase de modelado)
 - **Cloud (Bimestre 2):** AWS S3 (almacenamiento), Amazon SageMaker (entrenamiento e inferencia), dentro del **AWS Free Tier**
 - **Modelo:** Transfer learning con arquitectura liviana (EfficientNet-B0 / MobileNetV2 — a confirmar en fase de modelado)
 
@@ -24,7 +24,7 @@ Clasificar imágenes MRI cerebrales 2D en 4 categorías:
 
 | Bimestre | Período | Foco |
 |---|---|---|
-| 1 | Fines de agosto – fines de octubre | Documentación, arquitectura, EDA y prototipado de modelado en Google Colab |
+| 1 | Fines de agosto – fines de octubre | Documentación, arquitectura, EDA y prototipado de modelado en entorno local |
 | 2 | Noviembre | Modelado e implementación en AWS (SageMaker), dentro del free tier |
 
 ## Estructura del repositorio
@@ -44,6 +44,23 @@ mri-tumor-classifier/
 ```
 
 Ver [`docs/architecture.md`](docs/architecture.md) para el diseño completo de la arquitectura en AWS.
+
+## Cómo correr en local
+
+```bash
+python -m venv .venv
+.venv/Scripts/activate      # Windows
+pip install -r requirements.txt
+python -m ipykernel install --user --name mri-tumor-classifier --display-name "mri-tumor-classifier (.venv)"
+```
+
+Creá un `.env` en la raíz con tu token de Kaggle (no se versiona):
+
+```
+KAGGLE_API_TOKEN=tu_token
+```
+
+Después abrí `notebooks/01_eda.ipynb` en VS Code y seleccioná el kernel `mri-tumor-classifier (.venv)`.
 
 ## Estado actual
 

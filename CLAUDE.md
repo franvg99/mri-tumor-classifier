@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-**Este repo es un esqueleto documentado, no código funcional.** Todas las funciones de `src/` y todos los entry points de `scripts/` levantan `NotImplementedError`, y los tests son `pytest.skip()`. Los docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar acá, la tarea típica es completar un stub respetando su docstring, no refactorizar código que ya anda.
+**El código de `src/` (salvo `src/data/eda.py`, ya implementado) sigue siendo un esqueleto.** Todas las demás funciones de `src/` y todos los entry points de `scripts/` levantan `NotImplementedError`, y los tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
 
-Los notebooks (`notebooks/01_eda.ipynb`, `02_preprocessing_debug.ipynb`, `03_model_experiments.ipynb`) están vacíos salvo un título en markdown.
+`notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` y `03_model_experiments.ipynb` siguen vacíos, con solo un título en markdown.
 
-El proyecto todavía no está inicializado como repo git (existe `.gitignore` pero no hay `.git/`).
+El repo ya está inicializado (`.git/` existe) con remoto en GitHub (`franvg99/mri-tumor-classifier`).
 
 ## Comandos
 
 ```bash
+python -m venv .venv
+.venv/Scripts/activate                        # Windows (PowerShell: .venv\Scripts\Activate.ps1)
 pip install -r requirements.txt
 
 pytest                                        # todos los tests
@@ -23,6 +25,28 @@ pytest tests/test_model.py::test_build_model_output_shape_placeholder  # un test
 No hay linter, formateador ni Makefile configurados en el proyecto.
 
 `requirements.txt` tiene **el framework de deep learning comentado a propósito** (`torch` / `torchvision` / `tensorflow`). No lo descomentes ni instales uno por tu cuenta: la elección es una decisión pendiente del proyecto (ver abajo).
+
+### Entorno local (Windows)
+
+El proyecto se desarrolla en Windows dentro de una carpeta OneDrive, cuya ruta ya es larga de por sí — sumada a la de `.venv/site-packages`, algunos paquetes (`sagemaker`, `jedi`) superan el límite de 260 caracteres de Windows. Por eso hace falta tener habilitado `LongPathsEnabled=1` en `HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem` (cambio de registro a nivel de sistema, no del proyecto) antes de instalar `requirements.txt` completo.
+
+Para correr los notebooks localmente en VS Code, el venv se registra como kernel de Jupyter:
+
+```bash
+python -m ipykernel install --user --name mri-tumor-classifier --display-name "mri-tumor-classifier (.venv)"
+```
+
+Después hay que seleccionarlo a mano en el selector de kernel de VS Code — no se detecta solo.
+
+### Credenciales de Kaggle
+
+El EDA descarga el dataset con `kagglehub`, que necesita un token de Kaggle. Vive en un `.env` en la raíz del proyecto (no versionado, bloqueado en `.gitignore`):
+
+```
+KAGGLE_API_TOKEN=...
+```
+
+Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es un token único. El notebook lo carga con `python-dotenv` (`load_dotenv()`) al arrancar.
 
 ## Decisiones pendientes (no asumirlas)
 
@@ -41,10 +65,10 @@ Clasificación multiclase (4 clases: glioma, meningioma, pituitary, notumor) de 
 
 ### El proyecto tiene dos fases, y eso condiciona el código
 
-- **Bimestre 1 — prototipado en Google Colab** (GPU gratuita, sin reloj corriendo): EDA, preprocesamiento, augmentation, modelado y evaluación.
+- **Bimestre 1 — prototipado en entorno local** (venv del proyecto, sin reloj corriendo): EDA, preprocesamiento, augmentation, modelado y evaluación.
 - **Bimestre 2 — AWS SageMaker** dentro del free tier: entrenamiento, registro y endpoint.
 
-La regla de diseño central es que **el mismo código corre en los dos entornos sin modificarse**: `src/data/preprocessing.py` se porta tal cual del Colab al Studio Notebook, y `src/models/train.py` se pasa como `entry_point` del Estimator de SageMaker. Por eso `train.py` debe leer hiperparámetros y paths de datos desde variables de entorno / argumentos CLI (convención SageMaker), nunca hardcodeados ni tomados de un notebook.
+La regla de diseño central es que **el mismo código corre en los dos entornos sin modificarse**: `src/data/preprocessing.py` se porta tal cual del entorno local al Studio Notebook, y `src/models/train.py` se pasa como `entry_point` del Estimator de SageMaker. Por eso `train.py` debe leer hiperparámetros y paths de datos desde variables de entorno / argumentos CLI (convención SageMaker), nunca hardcodeados ni tomados de un notebook.
 
 ### Convenciones de SageMaker que hay que respetar
 

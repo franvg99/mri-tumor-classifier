@@ -1,9 +1,9 @@
 """
 Utilidades para subir/descargar datos de S3 usando boto3.
 
-Se usa desde Colab en el Bimestre 1 (con credenciales de AWS configuradas
-localmente) y desde el Studio Notebook en el Bimestre 2 (con el rol IAM
-del notebook).
+Se usa desde el entorno local en el Bimestre 1 (con credenciales de AWS
+configuradas a mano) y desde el Studio Notebook en el Bimestre 2 (con el
+rol IAM del notebook).
 """
 
 import boto3

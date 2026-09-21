@@ -1,8 +1,8 @@
 """
 Helpers de análisis exploratorio (EDA) del Brain Tumor MRI Dataset.
 
-Se usan desde `notebooks/01_eda.ipynb`, que corre sobre el runtime de Colab
-durante el Bimestre 1.
+Se usan desde `notebooks/01_eda.ipynb`, que corre local con el venv del
+proyecto durante el Bimestre 1.
 
 Todo lo que vive acá es deliberadamente agnóstico del framework de deep
 learning: sólo PIL, numpy, pandas y matplotlib. El EDA es justamente lo único
@@ -324,7 +324,7 @@ def graficar_intensidades(df_stats: pd.DataFrame, figsize=(13, 4)):
         ax.boxplot([df_stats[df_stats["clase"] == c][col].values for c in clases])
         # set_xticklabels en vez del parámetro `labels`/`tick_labels` de boxplot:
         # ese kwarg cambió de nombre entre versiones de matplotlib y rompería
-        # según la versión que tenga el runtime de Colab.
+        # según la versión instalada (requirements.txt no la fija).
         ax.set_xticks(range(1, len(clases) + 1))
         ax.set_xticklabels([ETIQUETAS.get(c, c) for c in clases])
         ax.set_title(titulo)

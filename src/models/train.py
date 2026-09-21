@@ -2,7 +2,7 @@
 Script de entrenamiento del clasificador.
 
 Diseñado para correr igual en dos entornos:
-- Google Colab (Bimestre 1, prototipado, GPU gratuita)
+- Entorno local (Bimestre 1, prototipado)
 - SageMaker Training Job (Bimestre 2, ml.m5.xlarge, CPU, on-demand, sin Spot)
 
 Al portarlo a SageMaker, este archivo se pasa como entry_point del

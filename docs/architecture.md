@@ -2,7 +2,7 @@
 
 ## Resumen
 
-El pipeline se divide en dos fases: prototipado en Google Colab (sin costo, sin límite de tiempo) y una fase formal en AWS acotada a la ventana de 2 meses del free tier de SageMaker.
+El pipeline se divide en dos fases: prototipado en entorno local (sin costo, sin límite de tiempo) y una fase formal en AWS acotada a la ventana de 2 meses del free tier de SageMaker.
 
 ## Diagrama de flujo
 

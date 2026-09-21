@@ -5,8 +5,9 @@ pillow
 matplotlib
 scikit-learn
 
-# EDA / descarga del dataset (Bimestre 1, Colab)
+# EDA / descarga del dataset (Bimestre 1, local)
 kagglehub
+python-dotenv
 
 # AWS
 boto3
