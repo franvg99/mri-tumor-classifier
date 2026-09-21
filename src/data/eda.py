@@ -246,7 +246,9 @@ def graficar_distribucion_clases(df: pd.DataFrame, figsize=(11, 4)):
     if tiene_split:
         tabla = pd.crosstab(df["clase"], df["split_origen"])
         tabla.index = [ETIQUETAS.get(c, c) for c in tabla.index]
-        tabla.plot(kind="bar", stacked=True, ax=axes[1], colormap="Blues")
+        # Colores fijos en vez de colormap="Blues": con solo 2 categorías, el
+        # extremo más claro de esa paleta sale casi blanco sobre fondo blanco.
+        tabla.plot(kind="bar", stacked=True, ax=axes[1], color=["#4C72B0", "#B3D2E8"])
         axes[1].set_title("Desglose por carpeta original del dataset")
         axes[1].set_xlabel("")
         axes[1].tick_params(axis="x", rotation=20)
