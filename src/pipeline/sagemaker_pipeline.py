@@ -1,7 +1,6 @@
 """
 Orquestación opcional con SageMaker Pipelines (stretch goal, no
-imprescindible para la entrega — ver docs/architecture.md, sección
-"Imprescindible vs. opcional").
+imprescindible para la entrega).
 
 Encadenaría: preprocesamiento -> entrenamiento -> registro del modelo,
 usando los mismos steps ya definidos en scripts/. No reduce costo por

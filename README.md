@@ -1,6 +1,9 @@
 # Clasificación de Tumores Cerebrales en MRI — Pipeline End-to-End en AWS
 
-Proyecto final de la Tecnicatura Superior en Ciencias de Datos. Pipeline completo de clasificación de imágenes de resonancia magnética cerebral (MRI) para detección de tumores, con foco en ingeniería de datos, transfer learning e implementación en la nube (AWS) dentro del free tier.
+Este es mi proyecto final de la Tecnicatura Superior en Ciencias de Datos. Construyo un
+pipeline completo de clasificación de imágenes de resonancia magnética cerebral (MRI)
+para detección de tumores, con foco en ingeniería de datos, transfer learning e
+implementación en la nube (AWS) dentro del free tier.
 
 ## Objetivo
 
@@ -12,11 +15,13 @@ Clasificar imágenes MRI cerebrales 2D en 4 categorías:
 
 ## Dataset
 
-[Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset) (Kaggle) — 7.023 imágenes, combinación de figshare + SARTAJ + Br35H, ya dividido en Training/Testing por clase.
+Trabajo con el [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset)
+de Kaggle — 7.200 imágenes (1.800 por clase, balanceado), combinación de figshare +
+SARTAJ + Br35H, ya dividido en Training/Testing por clase.
 
 ## Stack tecnológico
 
-- **Prototipado (Bimestre 1):** entorno local, Python, PyTorch/TensorFlow (a definir en fase de modelado)
+- **Prototipado (Bimestre 1):** entorno local, Python, PyTorch/TensorFlow (todavía sin definir, lo decido en la fase de modelado)
 - **Cloud (Bimestre 2):** AWS S3 (almacenamiento), Amazon SageMaker (entrenamiento e inferencia), dentro del **AWS Free Tier**
 - **Modelo:** Transfer learning con arquitectura liviana (EfficientNet-B0 / MobileNetV2 — a confirmar en fase de modelado)
 
@@ -43,9 +48,21 @@ mri-tumor-classifier/
 └── docs/             # Documentación técnica (arquitectura, model card)
 ```
 
-Ver [`docs/architecture.md`](docs/architecture.md) para el diseño completo de la arquitectura en AWS.
+Documento el diseño completo de la arquitectura en AWS en [`docs/architecture.md`](docs/architecture.md).
+
+## Documentación
+
+| Documento | Para quién | Qué encontrás |
+|---|---|---|
+| [`docs/documentacion_no_tecnica.md`](docs/documentacion_no_tecnica.md) | Cualquier lector, sin conocimiento técnico (pensado para que también lo entienda alguien con formación médica) | Qué es el proyecto, cómo funciona sin tecnicismos, y sus limitaciones |
+| [`docs/documentacion_tecnica.md`](docs/documentacion_tecnica.md) | Lectores técnicos | Decisiones de diseño, hallazgos del EDA y su impacto concreto en el código |
+| [`docs/model_card.md`](docs/model_card.md) | Quien evalúe el modelo formalmente | Ficha técnica: arquitectura, dataset, métricas, limitaciones |
+| [`docs/architecture.md`](docs/architecture.md) | Lectores técnicos | Diagrama de infraestructura en AWS y justificación de cada decisión de free tier |
+| [`docs/desarrollo_asistido_por_ia.md`](docs/desarrollo_asistido_por_ia.md) | Cualquier lector interesado en la metodología de trabajo | Con qué alcance se usó IA en el desarrollo, y qué parte es criterio propio |
 
 ## Cómo correr en local
+
+Así lo tengo armado para correr en mi máquina:
 
 ```bash
 python -m venv .venv
@@ -64,7 +81,7 @@ Después abrí `notebooks/01_eda.ipynb` en VS Code y seleccioná el kernel `mri-
 
 ## Estado actual
 
-🚧 En desarrollo — Bimestre 1 (documentación y prototipado).
+🚧 En desarrollo — Bimestre 1. Ya terminé el EDA (`notebooks/01_eda.ipynb`); mi próximo paso es elegir el framework y la arquitectura para arrancar el modelado.
 
 ## Autor
 

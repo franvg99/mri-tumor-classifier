@@ -9,7 +9,7 @@ aws:
 
 data:
   classes: [glioma, meningioma, pituitary, notumor]
-  image_size: 150  # TBD, definir en fase de modelado según arquitectura elegida
+  image_size: 224  # elegido en el EDA (sección 3): alinea con la resolución preentrenada de EfficientNet-B0/MobileNetV2
   train_split: 0.8
   val_split: 0.1
   test_split: 0.1

@@ -26,7 +26,7 @@ from PIL import Image
 
 CLASES = ("glioma", "meningioma", "pituitary", "notumor")
 
-# Nombres legibles para gráficos y reportes (los lee el tutor, no sólo nosotros)
+# Nombres legibles para gráficos y reportes (también los lee el tutor)
 ETIQUETAS = {
     "glioma": "Glioma",
     "meningioma": "Meningioma",
@@ -46,8 +46,8 @@ def listar_imagenes(root_dir, clases=CLASES) -> pd.DataFrame:
 
     Columnas: `path`, `archivo`, `clase`, `split_origen`, `peso_kb`.
     `split_origen` es la carpeta Training/Testing del dataset original; NO es
-    el split que vamos a usar nosotros, que se genera después de forma
-    estratificada en `preprocessing.split_dataset()`.
+    el split final del proyecto, que se genera después de forma estratificada
+    en `preprocessing.split_dataset()`.
     """
     root = Path(root_dir)
     if not root.is_dir():
@@ -108,7 +108,7 @@ def resumen_por_clase(df: pd.DataFrame) -> pd.DataFrame:
 def inspeccionar_metadatos(df: pd.DataFrame) -> pd.DataFrame:
     """Agrega ancho, alto, modo de color y relación de aspecto de cada imagen.
 
-    Es rápido sobre las 7.023 imágenes porque PIL lee el header sin decodificar
+    Es rápido sobre las 7.200 imágenes porque PIL lee el header sin decodificar
     los píxeles: `Image.open()` es lazy y `.size` / `.mode` no cargan el bitmap.
     """
     anchos, altos, modos = [], [], []

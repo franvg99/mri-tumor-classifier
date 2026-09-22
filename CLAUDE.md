@@ -54,10 +54,12 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 
 - **Framework:** PyTorch vs TensorFlow — sin definir. No escribas código que importe uno de los dos sin que el usuario lo haya elegido.
 - **Arquitectura:** EfficientNet-B0 vs MobileNetV2 — sin definir.
-- **`image_size`** (hoy `150`), `epochs`, `learning_rate` — sin definir.
+- **`epochs`**, **`learning_rate`** — sin definir.
 - **`s3_bucket`** y confirmación de `region` — sin definir.
 
-Al resolver alguna de estas, actualizá `config/config.yaml`, `docs/model_card.md` y la sección de stack del `README.md`, que hoy las listan como TBD en paralelo.
+**Ya resuelto:** `image_size` = 224, decidido en el EDA (sección 3 de `01_eda.ipynb`) para alinear con la resolución preentrenada de EfficientNet-B0/MobileNetV2 sobre ImageNet. Actualizado en `config/config.yaml` y `docs/model_card.md`.
+
+Al resolver alguna de las pendientes, actualizá `config/config.yaml`, `docs/model_card.md` y la sección de stack del `README.md`, que hoy las listan como TBD en paralelo.
 
 ## Arquitectura
 
@@ -91,13 +93,15 @@ Presupuesto: 250 hs/mes notebooks, 50 hs/mes entrenamiento, 125 hs/mes inferenci
 ## Criterios del dominio
 
 - **Métrica prioritaria: recall/sensibilidad**, no accuracy. Es un contexto sanitario: un falso negativo (tumor no detectado) es más costoso que un falso positivo. `src/models/evaluate.py` debe reportar recall y F1 por clase, matriz de confusión y ROC-AUC one-vs-rest.
-- **El augmentation es deliberadamente conservador** (rotaciones ±10-15°, flip horizontal, zoom leve, brillo/contraste). Evitar deformaciones agresivas que distorsionen features clínicamente relevantes.
+- **El augmentation es deliberadamente conservador** (rotaciones ±10-15°, zoom leve, brillo/contraste). Evitar deformaciones agresivas que distorsionen features clínicamente relevantes.
+  - **Sin flip horizontal:** el EDA (notebook `01_eda.ipynb`, sección 4) encontró que el dataset mezcla cortes axial/sagital/coronal sin etiquetar, y el flip es anatómicamente inválido en sagital.
+  - **Brillo/contraste no opcional:** el EDA (sección 5) encontró diferencias sistemáticas de intensidad entre clases que coinciden con la composición del dataset por fuente (notumor=100% Br35H) — riesgo de que el modelo aprenda la fuente en vez de la patología.
 - El augmentation se aplica **solo a train**; val/test usan el pipeline de `get_eval_pipeline()` (resize + normalize nada más).
 - El split debe ser **estratificado por clase** y con `seed` fijo.
 
 ## Datos
 
-El dataset ([Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset), 7.023 imágenes) **no se versiona**: vive en S3 bajo los prefijos `raw/`, `processed/` y `models/`. El `.gitignore` bloquea `data/`, `models/` y todas las extensiones de imagen y de pesos (`.pt`, `.pth`, `.h5`, `.ckpt`, `.npy`). No agregues datos ni artefactos de modelo al repo.
+El dataset ([Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset), 7.200 imágenes — 1.800 por clase, balanceado) **no se versiona**: vive en S3 bajo los prefijos `raw/`, `processed/` y `models/`. El `.gitignore` bloquea `data/`, `models/` y todas las extensiones de imagen y de pesos (`.pt`, `.pth`, `.h5`, `.ckpt`, `.npy`). No agregues datos ni artefactos de modelo al repo.
 
 ## Idioma
 
