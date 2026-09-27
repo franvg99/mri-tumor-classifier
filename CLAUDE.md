@@ -52,12 +52,15 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 
 `config/config.yaml` marca con `TBD` lo que todavía no se decidió, y varios stubs dependen de eso:
 
-- **Framework:** PyTorch vs TensorFlow — sin definir. No escribas código que importe uno de los dos sin que el usuario lo haya elegido.
-- **Arquitectura:** EfficientNet-B0 vs MobileNetV2 — sin definir.
 - **`epochs`**, **`learning_rate`** — sin definir.
 - **`s3_bucket`** y confirmación de `region` — sin definir.
 
-**Ya resuelto:** `image_size` = 224, decidido en el EDA (sección 3 de `01_eda.ipynb`) para alinear con la resolución preentrenada de EfficientNet-B0/MobileNetV2 sobre ImageNet. Actualizado en `config/config.yaml` y `docs/model_card.md`.
+**Ya resuelto:**
+- `image_size` = 224, decidido en el EDA (sección 3 de `01_eda.ipynb`) para alinear con la resolución preentrenada de EfficientNet-B0/MobileNetV2 sobre ImageNet.
+- **Framework: PyTorch** (27/9/2026) — sobre TensorFlow, priorizando la vigencia de PyTorch en el mercado laboral (investigación, LLMs/Hugging Face) por sobre la curva de entrada más suave de Keras.
+- **Arquitectura: EfficientNet-B0** (27/9/2026) — sobre MobileNetV2. Con el backbone congelado no hay backward pass a través de él, así que la diferencia de costo entre ambas es irrelevante acá; en cambio la mejor accuracy de transferencia de EfficientNet-B0 pesa más dado que la métrica prioritaria es recall (contexto clínico).
+
+Todo actualizado en `config/config.yaml` y `docs/model_card.md`.
 
 Al resolver alguna de las pendientes, actualizá `config/config.yaml`, `docs/model_card.md` y la sección de stack del `README.md`, que hoy las listan como TBD en paralelo.
 
