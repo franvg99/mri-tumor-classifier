@@ -8,8 +8,8 @@
 
 ## Descripción del modelo
 
-- **Arquitectura:** TBD (EfficientNet-B0 / MobileNetV2)
-- **Framework:** TBD (PyTorch / TensorFlow)
+- **Arquitectura:** EfficientNet-B0 (backbone preentrenado en ImageNet, congelado)
+- **Framework:** PyTorch
 - **Técnica:** Transfer learning (backbone preentrenado en ImageNet + fine-tuning de capas superiores)
 - **Resolución de entrada:** 224×224 — elegida en el EDA (`notebooks/01_eda.ipynb`, sección 3) para alinear con la resolución preentrenada estándar de EfficientNet-B0/MobileNetV2 sobre ImageNet, aceptando upscaling en el 11.3% de las imágenes que llegan más chicas
 

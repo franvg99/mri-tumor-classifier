@@ -13,10 +13,9 @@ python-dotenv
 boto3
 sagemaker
 
-# Deep learning — descomentar el framework elegido en la fase de modelado
-# torch
-# torchvision
-# tensorflow
+# Deep learning
+torch
+torchvision
 
 # Notebooks
 jupyter

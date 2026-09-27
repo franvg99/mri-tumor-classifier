@@ -15,8 +15,8 @@ data:
   test_split: 0.1
 
 training:
-  architecture: TBD  # efficientnet_b0 | mobilenet_v2
-  framework: TBD      # pytorch | tensorflow
+  architecture: efficientnet_b0
+  framework: pytorch
   batch_size: 32
   epochs: TBD
   learning_rate: TBD

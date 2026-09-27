@@ -21,9 +21,9 @@ SARTAJ + Br35H, ya dividido en Training/Testing por clase.
 
 ## Stack tecnológico
 
-- **Prototipado (Bimestre 1):** entorno local, Python, PyTorch/TensorFlow (todavía sin definir, lo decido en la fase de modelado)
+- **Prototipado (Bimestre 1):** entorno local, Python, PyTorch
 - **Cloud (Bimestre 2):** AWS S3 (almacenamiento), Amazon SageMaker (entrenamiento e inferencia), dentro del **AWS Free Tier**
-- **Modelo:** Transfer learning con arquitectura liviana (EfficientNet-B0 / MobileNetV2 — a confirmar en fase de modelado)
+- **Modelo:** Transfer learning con EfficientNet-B0 (backbone preentrenado en ImageNet, congelado)
 
 ## Cronograma
 
@@ -81,7 +81,7 @@ Después abrí `notebooks/01_eda.ipynb` en VS Code y seleccioná el kernel `mri-
 
 ## Estado actual
 
-🚧 En desarrollo — Bimestre 1. Ya terminé el EDA (`notebooks/01_eda.ipynb`); mi próximo paso es elegir el framework y la arquitectura para arrancar el modelado.
+🚧 En desarrollo — Bimestre 1. Ya terminé el EDA (`notebooks/01_eda.ipynb`) y elegí framework (PyTorch) y arquitectura (EfficientNet-B0); mi próximo paso es definir `epochs`/`learning_rate` e implementar los stubs de modelado.
 
 ## Autor
 
