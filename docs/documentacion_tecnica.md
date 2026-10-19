@@ -44,12 +44,12 @@ hardcodeados.
 
 | Decisión | Estado | Detalle |
 |---|---|---|
-| Framework (PyTorch/TensorFlow) | **Pendiente** | Bloquea la implementación de `train.py`, `architecture.py`, `augmentation.py` |
-| Arquitectura (EfficientNet-B0/MobileNetV2) | **Pendiente** | — |
+| Framework (PyTorch/TensorFlow) | **Resuelto: PyTorch** | Priorizo su vigencia en el mercado laboral y en investigación por sobre la curva de entrada más suave de Keras |
+| Arquitectura (EfficientNet-B0/MobileNetV2) | **Resuelto: EfficientNet-B0** | Con el backbone congelado la diferencia de costo es irrelevante; pesa más su mejor accuracy de transferencia, dado que la métrica prioritaria es el recall |
 | `image_size` | **Resuelto: 224×224** | Ver justificación abajo |
 | `epochs`, `learning_rate` | **Pendiente** | — |
 | `s3_bucket`, `region` | **Pendiente** | Bloquea Bimestre 2 |
-| Split train/val/test | **Resuelto: 80/10/10** | Estratificado, seed fijo |
+| Split train/val/test | **Resuelto: 70/10/20** | Estratificado, seed fijo, deduplicado antes. Agrando el test para acotar el margen de error del recall por clase (±3.1 puntos en lugar de ±4.4) |
 | Augmentation | **Parcialmente resuelto** | Ver hallazgos del EDA abajo |
 
 ## Hallazgos del EDA que ya condicionan decisiones posteriores
@@ -62,6 +62,25 @@ Setup del proyecto). Resumo acá lo relevante para cuando implemente
 
 7.200 imágenes, exactamente 1.800 por clase (25% cada una). **Dataset perfectamente
 balanceado** → no hacen falta class weights ni sampling especial en la loss.
+
+**Después de deduplicar** (ver punto 5) el balance ya no es perfecto: quedan 7.013
+imágenes y notumor, la clase que concentraba los duplicados, baja a ~24% del train
+contra ~25-25.5% del resto (relación máximo/mínimo de 1.06). Mantengo la decisión de no
+balancear, por tres motivos:
+
+- **El desbalance es despreciable.** Los class weights equivalentes quedarían entre 0.98
+  y 1.04, sin efecto práctico. Como referencia, el desbalance suele empezar a importar a
+  partir de una relación de 1.5-2.
+- **Las alternativas cuestan más de lo que corrigen.** El undersampling descartaría ~200
+  imágenes de train, y el oversampling volvería a introducir imágenes repetidas, que es
+  justamente lo que acabo de eliminar.
+- **El sesgo residual va en la dirección segura.** Con algunos ejemplos menos de
+  notumor, el modelo tiende levemente a predecir *menos* "sin tumor", que es el error
+  clínicamente costoso. Si el efecto llegara a notarse, favorecería el recall de las
+  clases con tumor.
+
+La evaluación no se ve afectada: el test está estratificado, así que el recall de cada
+clase se mide sobre la proporción real.
 
 ### 2. Resolución elegida: `image_size = 224`
 

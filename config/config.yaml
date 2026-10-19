@@ -10,9 +10,9 @@ aws:
 data:
   classes: [glioma, meningioma, pituitary, notumor]
   image_size: 224  # elegido en el EDA (sección 3): alinea con la resolución preentrenada de EfficientNet-B0/MobileNetV2
-  train_split: 0.8
+  train_split: 0.7
   val_split: 0.1
-  test_split: 0.1
+  test_split: 0.2  # test más grande que val: afina el recall por clase (ver preprocessing.split_dataset)
 
 training:
   architecture: efficientnet_b0
