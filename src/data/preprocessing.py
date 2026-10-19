@@ -1,5 +1,9 @@
 """
-Preprocesamiento de imágenes MRI: resize y normalización.
+Preparación del dataset MRI: deduplicado y split train/val/test.
+
+El resize y la normalización de cada imagen no viven acá sino en los
+pipelines de `augmentation.py`, que se aplican al servir cada imagen desde
+`MRIDataset`.
 
 Prototipado local (Bimestre 1); este módulo se porta luego al Studio
 Notebook de SageMaker sin modificaciones (mismo código, distinto
@@ -10,22 +14,6 @@ import hashlib
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
-
-
-def resize_image(image, target_size: int = 224):
-    """Redimensiona una imagen al tamaño de entrada del modelo.
-
-    TODO: implementar en fase de modelado (Bimestre 1).
-    """
-    raise NotImplementedError
-
-
-def normalize_image(image):
-    """Normaliza los valores de píxel (0-255 -> rango esperado por el backbone preentrenado).
-
-    TODO: implementar en fase de modelado (Bimestre 1).
-    """
-    raise NotImplementedError
 
 
 def _hash_md5(path) -> str:

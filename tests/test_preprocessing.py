@@ -38,16 +38,6 @@ def _agregar_copia(df, fila, clase=None):
     return pd.concat([df, pd.DataFrame([nueva])], ignore_index=True)
 
 
-def test_resize_image_placeholder():
-    """TODO: implementar en fase de modelado (Bimestre 1)."""
-    pytest.skip("Pendiente de implementación")
-
-
-def test_normalize_image_placeholder():
-    """TODO: implementar en fase de modelado (Bimestre 1)."""
-    pytest.skip("Pendiente de implementación")
-
-
 def test_deduplicar_conserva_una_copia(df_imagenes):
     df = _agregar_copia(_agregar_copia(df_imagenes, 0), 60)
 

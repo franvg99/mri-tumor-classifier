@@ -60,7 +60,17 @@ entrenar el modelo:
   fuentes — existe el riesgo de que el modelo aprenda a reconocer "de qué máquina/fuente
   vino la imagen" en vez de reconocer la patología real. Tomo medidas para mitigarlo
   (variar artificialmente el brillo/contraste durante el entrenamiento), pero es una
-  limitación estructural del dataset que no puedo eliminar del todo.
+  limitación estructural del dataset que no puedo eliminar del todo. Lo medí: un
+  programa muy simple que solo mira el brillo y el contraste de cada imagen, sin ver
+  ningún tumor, acierta la clase en el 63% de los casos (al azar acertaría el 25%).
+- **Las imágenes con tumor y las sin tumor parecen provenir de secuencias de resonancia
+  distintas.** Las imágenes con tumor se ven casi todas como T1 con contraste, mientras
+  que las "sin tumor" mezclan T1, T2 y FLAIR. Lo identifiqué a simple vista y me
+  interesa especialmente que lo confirme un profesional médico. Si se confirma, el
+  modelo podría aprender a asociar "aspecto de T2" con "sin tumor", y ante una T2 con
+  tumor respondería "sin tumor", que es justamente el error más grave. Por eso limito el
+  uso del modelo a imágenes T1 con contraste, y en la evaluación voy a clasificar a mano
+  una muestra de imágenes por secuencia para medir si el modelo cae en este atajo.
 - **Las imágenes no vienen etiquetadas con el tipo de corte** (axial, sagital o coronal),
   y el dataset mezcla los tres sin indicarlo.
 - Los resultados de desempeño real (qué tan bien clasifica) todavía no existen — el
@@ -68,8 +78,11 @@ entrenar el modelo:
 
 ## Estado actual del proyecto
 
-Ya terminé el análisis exploratorio de datos (EDA). Todavía no entrené el modelo — mi
-próximo paso es elegir la arquitectura y el framework a usar. Ver
+Ya terminé el análisis exploratorio de datos (EDA), elegí la tecnología y el modelo base
+(PyTorch y EfficientNet-B0), y preparé los datos: eliminé las imágenes repetidas, separé
+las imágenes en grupos de entrenamiento, validación y prueba, y definí las variaciones
+artificiales que se aplican durante el entrenamiento. Todavía no entrené el modelo —
+ese es el próximo paso. Ver
 [`model_card.md`](model_card.md) para el detalle técnico-formal del modelo (que hoy tiene
 varios campos pendientes, justamente porque el modelo todavía no existe).
 

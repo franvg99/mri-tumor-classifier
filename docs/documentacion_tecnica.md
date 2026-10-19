@@ -50,7 +50,7 @@ hardcodeados.
 | `epochs`, `learning_rate` | **Pendiente** | — |
 | `s3_bucket`, `region` | **Pendiente** | Bloquea Bimestre 2 |
 | Split train/val/test | **Resuelto: 70/10/20** | Estratificado, seed fijo, deduplicado antes. Agrando el test para acotar el margen de error del recall por clase (±3.1 puntos en lugar de ±4.4) |
-| Augmentation | **Parcialmente resuelto** | Ver hallazgos del EDA abajo |
+| Augmentation | **Resuelto** | Rotación ±10°, zoom ±10%, brillo/contraste ±40%, sin flip. Ver hallazgos del EDA abajo |
 
 ## Hallazgos del EDA que ya condicionan decisiones posteriores
 
@@ -116,6 +116,51 @@ directa contra el riesgo de que el modelo aprenda a distinguir "de qué fuente v
 imagen" en vez de patología real. Lo documento también como limitación en
 [`model_card.md`](model_card.md).
 
+**Cuantificación del atajo (19/10/2026).** Para medir qué tan fuerte es esta señal,
+entrené una regresión logística que solo recibe **dos números por imagen: brillo medio y
+desvío** (sin ninguna información de forma ni de textura), sobre una muestra de 2.000
+imágenes (70/30 estratificado):
+
+| Escenario | Accuracy | Recall notumor |
+|---|---|---|
+| Azar | 0.25 | — |
+| Sin augmentation | **0.63** | 0.55 |
+| ColorJitter brillo/contraste 0.2 | 0.62 | 0.51 |
+| ColorJitter brillo/contraste 0.4 | 0.61 | 0.52 |
+| ColorJitter brillo/contraste 0.6 | 0.60 | 0.53 |
+| Normalización por imagen (media 0, desvío 1)¹ | 0.56 | 0.49 |
+
+¹ Con la normalización por imagen, el brillo y el desvío quedan constantes y no informan
+nada; el clasificador usa en su lugar la forma del histograma (percentiles 1 y 99
+estandarizados y fracción de fondo negro).
+
+Conclusiones:
+
+- **Dos estadísticos de intensidad alcanzan para acertar el 63%**, más del doble que el
+  azar. Lo que en el EDA era una sospecha visual pasa a ser una señal medida.
+- **El augmentation de brillo/contraste casi no la reduce** (0.63 → 0.61). Es simétrico:
+  ensancha la distribución de cada clase pero no mueve su promedio, así que notumor sigue
+  siendo en promedio más brillante. Además se aplica solo a train, y test conserva el
+  sesgo intacto.
+- **La normalización por imagen la reduce más (0.56), pero no la elimina.** La forma del
+  histograma sigue delatando la fuente y, a la vez, mezcla información anatómica real,
+  por lo que no se puede limpiar sin perder señal útil.
+- **El origen del problema es el armado del dataset, no el preprocesamiento.** Mientras
+  "sin tumor" provenga de una única fuente, la fuente y la etiqueta quedan confundidas, y
+  como test proviene de las mismas fuentes, su métrica no puede detectar si el modelo usa
+  el atajo.
+
+**Decisiones derivadas:**
+
+- Mantengo ColorJitter en 0.4. No resuelve el atajo, pero vuelve al modelo más robusto a
+  diferencias de intensidad entre equipos de resonancia, lo que tiene valor propio.
+- No incorporo la normalización por imagen por ahora: la mejora es moderada frente a la
+  complejidad que agrega. Queda como experimento posible.
+- En la evaluación voy a incluir una **prueba de estrés de brillo**: modificar
+  artificialmente el brillo de imágenes de test con tumor y medir si el modelo empieza a
+  predecir "sin tumor". Es la forma de comprobar si el modelo final usa el atajo, algo
+  que la métrica de test por sí sola no puede mostrar.
+
 ### 5. Duplicados exactos: 4.72% del dataset
 
 Con `detectar_duplicados()` encontré 340 archivos (153 grupos) duplicados byte a byte,
@@ -123,6 +168,40 @@ ninguno cruzando clases distintas, concentrados en notumor (~64% de los duplicad
 otra pista a favor del hallazgo anterior. **Decisión:** deduplico antes del split
 estratificado propio (`preprocessing.split_dataset()`), no del split Training/Testing
 original de Kaggle — este último no me protege contra fuga de datos porque lo descarto.
+
+### 6. Las clases difieren en el tipo de secuencia de resonancia (19/10/2026)
+
+Al verificar visualmente el augmentation, revisé 10 imágenes al azar por clase y encontré
+un patrón que el análisis de intensidades no mostraba:
+
+- **glioma, meningioma y pituitario** son, casi en su totalidad, de un mismo tipo de
+  secuencia: líquido cefalorraquídeo oscuro, parénquima gris y lesión realzada.
+  Visualmente corresponden a **T1 con contraste**.
+- **notumor** mezcla secuencias: además de T1, aparecen imágenes con el líquido
+  cefalorraquídeo brillante (compatibles con **T2**) y otras compatibles con **FLAIR**.
+
+La identificación es visual y no la hizo un especialista; queda pendiente de
+confirmación por un profesional médico.
+
+**Por qué es más grave que la diferencia de brillo:**
+
+- **El augmentation no la corrige.** T1 y T2 no difieren en un brillo global sino en el
+  contraste relativo entre tejidos (el líquido pasa de negro a blanco). Ninguna
+  transformación de intensidad convierte una secuencia en otra.
+- **Empuja hacia el error clínicamente costoso.** El modelo puede aprender "aspecto T2 →
+  sin tumor". Ante una imagen T2 con tumor, la predicción probable sería "sin tumor", es
+  decir, un falso negativo.
+
+**Decisiones derivadas:**
+
+- **Acoto el uso previsto del modelo a imágenes T1 con contraste**, la única secuencia
+  representada en las clases con tumor. Queda registrado en la
+  [model card](model_card.md).
+- **Etiquetado manual de secuencias en la evaluación (pendiente):** clasificar a mano,
+  idealmente con participación de un profesional médico, una muestra de imágenes
+  notumor de test como T1 o T2/FLAIR, y comparar el recall del modelo en cada grupo. Si
+  el modelo solo reconoce correctamente las T2/FLAIR, aprendió la secuencia y no la
+  ausencia de tumor. Sigue la misma lógica que la prueba de estrés de brillo del punto 4.
 
 ## Convenciones de código a respetar
 

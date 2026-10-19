@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-**El código de `src/` (salvo `src/data/eda.py`, ya implementado) sigue siendo un esqueleto.** Todas las demás funciones de `src/` y todos los entry points de `scripts/` levantan `NotImplementedError`, y los tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
+**`src/data/` ya está implementado** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests). **El resto de `src/` sigue siendo un esqueleto:** sus funciones y todos los entry points de `scripts/` levantan `NotImplementedError`, y sus tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
 
 `notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` y `03_model_experiments.ipynb` siguen vacíos, con solo un título en markdown.
 
@@ -99,7 +99,8 @@ Presupuesto: 250 hs/mes notebooks, 50 hs/mes entrenamiento, 125 hs/mes inferenci
 - **El augmentation es deliberadamente conservador** (rotaciones ±10-15°, zoom leve, brillo/contraste). Evitar deformaciones agresivas que distorsionen features clínicamente relevantes.
   - **Sin flip horizontal:** el EDA (notebook `01_eda.ipynb`, sección 4) encontró que el dataset mezcla cortes axial/sagital/coronal sin etiquetar, y el flip es anatómicamente inválido en sagital.
   - **Brillo/contraste no opcional:** el EDA (sección 5) encontró diferencias sistemáticas de intensidad entre clases que coinciden con la composición del dataset por fuente (notumor=100% Br35H) — riesgo de que el modelo aprenda la fuente en vez de la patología.
-- El augmentation se aplica **solo a train**; val/test usan el pipeline de `get_eval_pipeline()` (resize + normalize nada más).
+- El augmentation se aplica **solo a train**; val/test usan el pipeline de `get_eval_pipeline()` (resize + normalize nada más). Es la única definición del preprocesamiento de evaluación: `inference.py` debe importarla, no reimplementarla.
+- **Atajos medidos en el dataset** (ver `docs/documentacion_tecnica.md`, puntos 4 y 6): brillo/desvío solos predicen la clase con 63% de accuracy, y las clases con tumor son casi todas T1 con contraste mientras notumor mezcla T1/T2/FLAIR. Ninguno se corrige con preprocesamiento; `evaluate.py` debe medirlos (prueba de estrés de brillo, recall por secuencia sobre una muestra etiquetada a mano). El uso previsto está acotado a T1 con contraste.
 - El split debe ser **estratificado por clase** y con `seed` fijo.
 
 ## Datos

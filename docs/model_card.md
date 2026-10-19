@@ -38,14 +38,30 @@ Priorizadas por contexto sanitario (un falso negativo es más costoso que un fal
   diferencias sistemáticas de brillo, contraste y fondo entre clases que coinciden con
   esta composición, no con una diferencia clínica confirmada. Existe riesgo de que el
   modelo aprenda a distinguir por el "estilo" de la fuente de origen en vez de por
-  patología real. Mitigado parcialmente con augmentation de brillo/contraste, pero es una
-  limitación estructural del dataset que no se puede eliminar del todo.
+  patología real. Un clasificador que solo recibe el brillo medio y el desvío de cada
+  imagen alcanza 63% de accuracy (azar: 25%); el augmentation de brillo/contraste lo
+  reduce apenas a 61%, y la normalización por imagen a 56%. Es una limitación estructural
+  del dataset que el preprocesamiento no puede eliminar, y que la métrica de test no
+  detecta porque test proviene de las mismas fuentes. Se evalúa aparte con una prueba de
+  estrés de brillo sobre el modelo entrenado (detalle en la
+  [documentación técnica](documentacion_tecnica.md)).
+- **Tipo de secuencia de resonancia confundido con la clase:** las clases con tumor son,
+  casi en su totalidad, imágenes T1 con contraste, mientras que "Sin tumor" mezcla T1,
+  T2 y FLAIR (identificación visual sobre una muestra, pendiente de confirmación
+  médica). El modelo puede asociar el aspecto T2/FLAIR con "Sin tumor", lo que ante una
+  imagen T2 con tumor produciría un falso negativo. El augmentation de intensidad no
+  corrige esta diferencia. Se evaluará con un etiquetado manual de secuencias sobre una
+  muestra de test.
 - El resto de las limitaciones (basadas en resultados de entrenamiento y evaluación) se
   completan en fase de modelado.
 
 ## Uso previsto
 
 Proyecto académico — no apto para uso clínico real sin validación adicional.
+
+Dentro de ese marco, el modelo solo es aplicable a **cortes 2D de resonancia T1 con
+contraste**, la única secuencia representada en las clases con tumor del dataset de
+entrenamiento. Sus predicciones sobre otras secuencias (T2, FLAIR) no son confiables.
 
 ---
 
