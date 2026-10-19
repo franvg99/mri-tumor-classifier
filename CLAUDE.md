@@ -22,9 +22,9 @@ pytest tests/test_model.py                    # un archivo
 pytest tests/test_model.py::test_build_model_output_shape_placeholder  # un test
 ```
 
-No hay linter, formateador ni Makefile configurados en el proyecto.
+No hay linter, formateador ni Makefile configurados en el proyecto. `pytest.ini` agrega la raíz al `sys.path` (`pythonpath = .`) para que los tests importen `src`; sin él, `pytest` a secas falla en la recolección.
 
-`requirements.txt` tiene **el framework de deep learning comentado a propósito** (`torch` / `torchvision` / `tensorflow`). No lo descomentes ni instales uno por tu cuenta: la elección es una decisión pendiente del proyecto (ver abajo).
+`requirements.txt` incluye `torch` y `torchvision` (framework ya decidido: PyTorch). No agregues `tensorflow`.
 
 ### Entorno local (Windows)
 
@@ -56,6 +56,9 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 - **`s3_bucket`** y confirmación de `region` — sin definir.
 
 **Ya resuelto:**
+- **Split 70/10/20** (19/10/2026), estratificado, deduplicado antes, `seed=42` — test agrandado para acotar el margen de error del recall por clase. `split_dataset(df)` recibe el DataFrame de `eda.listar_imagenes()` y devuelve 3 DataFrames.
+- **Sin balanceo de clases** tras deduplicar (ratio 1.06; justificado en `docs/documentacion_tecnica.md`, punto 1).
+- **Augmentation:** `RandomAffine(±10°, zoom ±10%)` + `ColorJitter(brillo/contraste 0.4)`, sin flip.
 - `image_size` = 224, decidido en el EDA (sección 3 de `01_eda.ipynb`) para alinear con la resolución preentrenada de EfficientNet-B0/MobileNetV2 sobre ImageNet.
 - **Framework: PyTorch** (27/9/2026) — sobre TensorFlow, priorizando la vigencia de PyTorch en el mercado laboral (investigación, LLMs/Hugging Face) por sobre la curva de entrada más suave de Keras.
 - **Arquitectura: EfficientNet-B0** (27/9/2026) — sobre MobileNetV2. Con el backbone congelado no hay backward pass a través de él, así que la diferencia de costo entre ambas es irrelevante acá; en cambio la mejor accuracy de transferencia de EfficientNet-B0 pesa más dado que la métrica prioritaria es recall (contexto clínico).
