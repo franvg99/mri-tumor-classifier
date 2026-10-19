@@ -119,7 +119,8 @@ imagen" en vez de patología real. Lo documento también como limitación en
 **Cuantificación del atajo (19/10/2026).** Para medir qué tan fuerte es esta señal,
 entrené una regresión logística que solo recibe **dos números por imagen: brillo medio y
 desvío** (sin ninguna información de forma ni de textura), sobre una muestra de 2.000
-imágenes (70/30 estratificado):
+imágenes (70/30 estratificado). El experimento es reproducible en
+`notebooks/02_preprocessing_debug.ipynb`, sección 3:
 
 | Escenario | Accuracy | Recall notumor |
 |---|---|---|
@@ -181,7 +182,8 @@ un patrón que el análisis de intensidades no mostraba:
   cefalorraquídeo brillante (compatibles con **T2**) y otras compatibles con **FLAIR**.
 
 La identificación es visual y no la hizo un especialista; queda pendiente de
-confirmación por un profesional médico.
+confirmación por un profesional médico. La grilla de imágenes por clase sobre la que se
+basa está en `notebooks/02_preprocessing_debug.ipynb`, sección 4.
 
 **Por qué es más grave que la diferencia de brillo:**
 

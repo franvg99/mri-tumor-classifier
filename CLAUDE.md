@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **`src/data/` ya está implementado** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests). **El resto de `src/` sigue siendo un esqueleto:** sus funciones y todos los entry points de `scripts/` levantan `NotImplementedError`, y sus tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
 
-`notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` y `03_model_experiments.ipynb` siguen vacíos, con solo un título en markdown.
+`notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` verifica el split y el augmentation y reproduce los experimentos de los atajos del dataset (brillo y secuencias). `03_model_experiments.ipynb` sigue vacío, con solo un título en markdown.
 
 El repo ya está inicializado (`.git/` existe) con remoto en GitHub (`franvg99/mri-tumor-classifier`).
 

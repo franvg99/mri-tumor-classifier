@@ -48,9 +48,25 @@ Ejemplos concretos de esta misma colaboración, no afirmaciones genéricas:
   figuraba en la documentación heredada del scaffolding inicial, la contrasté con lo que
   muestra la página de Kaggle y detecté la discrepancia con las 7.200 imágenes reales del
   dataset descargado, lo que llevó a corregir la documentación en varios archivos.
+- **Cuestionamiento de una proporción estándar.** La propuesta inicial de split era
+  80/10/10. Pregunté si un 10% de test no quedaba corto, y propuse 70/10/20. Al
+  analizarlo, el argumento se sostuvo: como la métrica central es el recall por clase,
+  duplicar el test baja el margen de error de cada recall de ±4.4 a ±3.1 puntos, y con el
+  backbone congelado el costo de achicar el train es bajo. Quedó 70/10/20.
+- **Una pregunta que destapó una explicación incompleta.** Para mitigar la diferencia de
+  brillo entre clases, la IA propuso un augmentation de brillo/contraste de 0.4,
+  argumentando que así los rangos de brillo de las clases se superponen. Pregunté si eso
+  resolvía realmente la diferencia con la clase "sin tumor". Al medirlo con un
+  experimento, la respuesta fue que no: un clasificador que solo ve brillo y contraste
+  acierta el 63%, y el augmentation apenas lo baja a 61%, porque no mueve el promedio de
+  cada clase. Esa misma revisión llevó a un hallazgo más importante: las clases con
+  tumor y la clase sin tumor parecen provenir de secuencias de resonancia distintas (T1
+  frente a T2/FLAIR), lo que terminó acotando el uso previsto del modelo. El experimento
+  es reproducible en `notebooks/02_preprocessing_debug.ipynb`.
 - **Todas las decisiones de diseño abiertas** (`image_size`, exclusión del flip
   horizontal en el augmentation, migración del flujo de trabajo de Google Colab a un
-  entorno local, estructura y tono de la documentación) me las presentaron como
+  entorno local, proporciones del split, no balancear las clases tras deduplicar,
+  estructura y tono de la documentación) me las presentaron como
   disyuntivas con sus argumentos a favor y en contra, y las decidí yo — no las asumió la
   IA.
 - **Ritmo de trabajo que dirigí yo:** hice el desarrollo pidiendo explicaciones de cada
