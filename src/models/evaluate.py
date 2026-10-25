@@ -6,26 +6,139 @@ negativo — no detectar un tumor real — es más costoso que un falso
 positivo):
 
 - Recall / Sensibilidad (por clase)
-- F1-Score (por clase y macro)
+- Precisión y F1-Score (por clase y macro)
 - Matriz de confusión
 - ROC-AUC (one-vs-rest, multiclase)
+- Imágenes con tumor clasificadas como "notumor" (el falso negativo
+  clínicamente más grave)
+
+El conjunto de test se usa solo para medir: ninguna decisión sobre el modelo
+(época, hiperparámetros, umbrales) se toma mirando su resultado, porque dejaría
+de ser una estimación limpia del desempeño.
+
+Uso local:
+    python -m src.models.evaluate --data-dir <carpeta del dataset de Kaggle>
 """
+
+import argparse
+import json
+import os
+
+import matplotlib
+
+matplotlib.use("Agg")  # backend sin ventana: el script corre sin pantalla
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    confusion_matrix,
+    precision_recall_fscore_support,
+    roc_auc_score,
+)
+from torch.utils.data import DataLoader
+
+from src.data.augmentation import get_eval_pipeline
+from src.data.dataset import CLASE_A_INDICE, CLASES, MRIDataset
+from src.data.eda import ETIQUETAS, listar_imagenes
+from src.data.preprocessing import split_dataset
+from src.models.architecture import build_model
+
+INDICE_NOTUMOR = CLASE_A_INDICE["notumor"]
 
 
 def compute_metrics(y_true, y_pred, y_proba=None):
-    """Calcula recall, F1, matriz de confusión y ROC-AUC.
+    """Calcula recall, precisión, F1, matriz de confusión y ROC-AUC.
 
-    TODO: implementar en fase de modelado (Bimestre 1), usando scikit-learn.
+    Args:
+        y_true: etiquetas reales (índices de `CLASES`).
+        y_pred: etiquetas predichas (índices de `CLASES`).
+        y_proba: probabilidades por clase, shape `(n, 4)`. Opcional; sin ellas
+            no se calcula el ROC-AUC.
+
+    Returns:
+        Diccionario con las métricas por clase, sus promedios macro, la
+        accuracy, la matriz de confusión (filas: clase real; columnas: clase
+        predicha) y la cantidad de imágenes con tumor predichas como "notumor".
     """
-    raise NotImplementedError
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    indices = list(range(len(CLASES)))
+
+    precision, recall, f1, soporte = precision_recall_fscore_support(
+        y_true, y_pred, labels=indices, zero_division=0
+    )
+    por_clase = {
+        clase: {
+            "recall": float(recall[i]),
+            "precision": float(precision[i]),
+            "f1": float(f1[i]),
+            "soporte": int(soporte[i]),
+        }
+        for i, clase in enumerate(CLASES)
+    }
+
+    es_tumor = y_true != INDICE_NOTUMOR
+    metricas = {
+        "por_clase": por_clase,
+        "recall_macro": float(recall.mean()),
+        "precision_macro": float(precision.mean()),
+        "f1_macro": float(f1.mean()),
+        "accuracy": float((y_true == y_pred).mean()),
+        "matriz_confusion": confusion_matrix(y_true, y_pred, labels=indices).tolist(),
+        "tumores_como_sanos": int((es_tumor & (y_pred == INDICE_NOTUMOR)).sum()),
+        "tumores_total": int(es_tumor.sum()),
+    }
+
+    if y_proba is not None:
+        y_proba = np.asarray(y_proba)
+        for i, clase in enumerate(CLASES):
+            # One-vs-rest: la clase i contra todas las demás juntas.
+            por_clase[clase]["roc_auc"] = float(roc_auc_score(y_true == i, y_proba[:, i]))
+        metricas["roc_auc_macro"] = float(
+            np.mean([por_clase[c]["roc_auc"] for c in CLASES])
+        )
+
+    return metricas
+
+
+def predecir(model, loader):
+    """Corre el modelo sobre un loader completo.
+
+    Returns:
+        `(y_true, y_pred, y_proba)`: etiquetas reales, clase predicha y
+        probabilidades por clase (softmax de los logits).
+    """
+    model.eval()
+    y_true, y_proba = [], []
+    with torch.no_grad():
+        for imagenes, etiquetas in loader:
+            y_proba.append(torch.softmax(model(imagenes), dim=1))
+            y_true.extend(etiquetas.tolist())
+
+    y_proba = torch.cat(y_proba).numpy()
+    return np.array(y_true), y_proba.argmax(axis=1), y_proba
 
 
 def plot_confusion_matrix(y_true, y_pred, class_names):
     """Genera la matriz de confusión como imagen, para incluir en la documentación final.
 
-    TODO: implementar en fase de modelado (Bimestre 1).
+    Returns:
+        La figura de matplotlib (quien la llama decide si la guarda o la muestra).
     """
-    raise NotImplementedError
+    fig, ax = plt.subplots(figsize=(6, 5))
+    ConfusionMatrixDisplay.from_predictions(
+        y_true,
+        y_pred,
+        labels=list(range(len(class_names))),
+        display_labels=class_names,
+        cmap="Blues",
+        colorbar=False,
+        ax=ax,
+    )
+    ax.set(title="Matriz de confusión (test)", xlabel="Predicción", ylabel="Clase real")
+    fig.tight_layout()
+    return fig
 
 
 def brightness_stress_test(model, df_test, factores=(0.6, 0.8, 1.0, 1.2, 1.4)):
@@ -44,3 +157,54 @@ def brightness_stress_test(model, df_test, factores=(0.6, 0.8, 1.0, 1.2, 1.4)):
     TODO: implementar en fase de evaluación (Bimestre 1).
     """
     raise NotImplementedError
+
+
+def cargar_modelo(model_dir):
+    """Reconstruye la arquitectura y le carga los pesos entrenados de `model.pth`."""
+    model = build_model(num_classes=len(CLASES), pretrained=False)
+    model.load_state_dict(torch.load(os.path.join(model_dir, "model.pth")))
+    return model
+
+
+def main(argv=None):
+    """Evalúa el modelo entrenado sobre el conjunto de test y guarda los resultados."""
+    parser = argparse.ArgumentParser(description="Evaluación del clasificador MRI sobre test")
+    parser.add_argument("--data-dir", required=True,
+                        help="Carpeta del dataset de Kaggle (con las 4 clases).")
+    parser.add_argument("--model-dir", default="models", help="Carpeta con model.pth.")
+    parser.add_argument("--output-dir", default="models",
+                        help="Dónde se guardan las métricas y la matriz de confusión.")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args(argv)
+
+    # Mismo split que en train.py (misma seed): test nunca se usó para entrenar ni elegir.
+    _, _, df_test = split_dataset(listar_imagenes(args.data_dir), seed=args.seed)
+    loader_test = DataLoader(MRIDataset(df_test, get_eval_pipeline()), batch_size=64)
+
+    model = cargar_modelo(args.model_dir)
+    y_true, y_pred, y_proba = predecir(model, loader_test)
+    metricas = compute_metrics(y_true, y_pred, y_proba)
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    with open(os.path.join(args.output_dir, "metricas_test.json"), "w", encoding="utf-8") as f:
+        json.dump(metricas, f, indent=2, ensure_ascii=False)
+
+    fig = plot_confusion_matrix(y_true, y_pred, [ETIQUETAS[c] for c in CLASES])
+    fig.savefig(os.path.join(args.output_dir, "matriz_confusion_test.png"), dpi=120)
+    plt.close(fig)
+
+    print(f"test: {len(y_true)} imágenes")
+    for clase, m in metricas["por_clase"].items():
+        print(
+            f"{clase:<11} recall {m['recall']:.3f} | precisión {m['precision']:.3f} | "
+            f"F1 {m['f1']:.3f} | ROC-AUC {m['roc_auc']:.3f} | n={m['soporte']}"
+        )
+    print(
+        f"macro: recall {metricas['recall_macro']:.3f} | precisión {metricas['precision_macro']:.3f} | "
+        f"F1 {metricas['f1_macro']:.3f} | ROC-AUC {metricas['roc_auc_macro']:.3f}"
+    )
+    print(f"tumores como sanos: {metricas['tumores_como_sanos']}/{metricas['tumores_total']}")
+
+
+if __name__ == "__main__":
+    main()
