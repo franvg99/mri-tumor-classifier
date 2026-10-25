@@ -1,11 +1,13 @@
 """Tests unitarios para src/models/architecture.py y evaluate.py"""
 
 import numpy as np
+import pandas as pd
 import pytest
 import torch
+from PIL import Image
 
 from src.models.architecture import build_model
-from src.models.evaluate import compute_metrics
+from src.models.evaluate import brightness_stress_test, compute_metrics
 
 
 @pytest.fixture(scope="module")
@@ -66,3 +68,19 @@ def test_compute_metrics_roc_auc_perfecto():
     y_proba = np.eye(4) * 0.7 + 0.075  # 0.775 en la clase real, 0.075 en el resto
     m = compute_metrics(y_true, y_proba.argmax(axis=1), y_proba)
     assert m["roc_auc_macro"] == 1.0
+
+
+def test_brightness_stress_test_una_fila_por_factor(modelo, tmp_path):
+    """Con imágenes sintéticas de ambas categorías, devuelve una fila por factor
+    y fracciones válidas (entre 0 y 1)."""
+    filas = []
+    for i, clase in enumerate(["glioma", "notumor"]):
+        path = tmp_path / f"{clase}.png"
+        Image.new("L", (64, 64), color=60 + 100 * i).save(path)
+        filas.append({"path": str(path), "clase": clase})
+
+    df = brightness_stress_test(modelo, pd.DataFrame(filas), factores=(0.5, 1.0, 1.8))
+
+    assert df["factor"].tolist() == [0.5, 1.0, 1.8]
+    for columna in ("tumores_como_sanos", "recall_notumor", "accuracy"):
+        assert df[columna].between(0, 1).all()

@@ -29,7 +29,9 @@ import matplotlib
 matplotlib.use("Agg")  # backend sin ventana: el script corre sin pantalla
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
+import torchvision.transforms.functional as TF
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     confusion_matrix,
@@ -37,6 +39,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from torch.utils.data import DataLoader
+from torchvision import transforms
 
 from src.data.augmentation import get_eval_pipeline
 from src.data.dataset import CLASE_A_INDICE, CLASES, MRIDataset
@@ -141,22 +144,69 @@ def plot_confusion_matrix(y_true, y_pred, class_names):
     return fig
 
 
-def brightness_stress_test(model, df_test, factores=(0.6, 0.8, 1.0, 1.2, 1.4)):
+def _pipeline_con_brillo(factor):
+    """Pipeline de evaluación precedido por un cambio de brillo de `factor`."""
+    return transforms.Compose(
+        [transforms.Lambda(lambda img: TF.adjust_brightness(img, factor)), get_eval_pipeline()]
+    )
+
+
+def brightness_stress_test(model, df_test, factores=(0.5, 0.75, 1.0, 1.25, 1.5, 1.8)):
     """Mide si el modelo usa el brillo como atajo para predecir la clase.
 
-    Multiplica el brillo de las imágenes de test con tumor por cada factor y
-    reporta qué fracción pasa a predecirse como "notumor". Si esa fracción crece
-    al aclarar las imágenes, el modelo se apoya en el brillo (señal de la fuente
-    Br35H, no de la patología).
+    Multiplica el brillo de las imágenes de test por cada factor y reporta, para
+    cada uno:
+
+    - `tumores_como_sanos`: fracción de imágenes con tumor predichas como
+      "notumor". Si crece al aclarar las imágenes, el modelo se apoya en el
+      brillo (señal de la fuente Br35H, no de la patología).
+    - `recall_notumor`: fracción de imágenes sin tumor que se siguen prediciendo
+      como "notumor". Si cae al oscurecerlas, es el mismo atajo visto desde la
+      otra clase.
 
     Motivación: un clasificador que solo ve brillo medio y desvío acierta el 63%
     (azar: 25%), y como test proviene de las mismas fuentes que train, la métrica
     de test no puede detectar el atajo. Ver docs/documentacion_tecnica.md,
     sección 4 de los hallazgos del EDA.
 
-    TODO: implementar en fase de evaluación (Bimestre 1).
+    Rango de factores: el augmentation de train ya varía el brillo entre 0.6 y
+    1.4, por lo que dentro de ese rango se espera robustez por construcción. El
+    rango se extiende hasta 1.8, la relación de brillo medio entre "notumor" y
+    glioma medida en el EDA. En los factores altos, parte de los píxeles se
+    satura en blanco.
+
+    Returns:
+        DataFrame con una fila por factor.
     """
-    raise NotImplementedError
+    filas = []
+    for factor in factores:
+        loader = DataLoader(MRIDataset(df_test, _pipeline_con_brillo(factor)), batch_size=64)
+        y_true, y_pred, _ = predecir(model, loader)
+        es_tumor = y_true != INDICE_NOTUMOR
+        filas.append(
+            {
+                "factor": factor,
+                "tumores_como_sanos": float((y_pred[es_tumor] == INDICE_NOTUMOR).mean()),
+                "recall_notumor": float((y_pred[~es_tumor] == INDICE_NOTUMOR).mean()),
+                "accuracy": float((y_true == y_pred).mean()),
+            }
+        )
+    return pd.DataFrame(filas)
+
+
+def plot_brightness_stress_test(df_estres):
+    """Grafica el resultado de `brightness_stress_test()` en función del factor."""
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.plot(df_estres["factor"], df_estres["tumores_como_sanos"], marker="o",
+            label="Tumores predichos como sin tumor")
+    ax.plot(df_estres["factor"], df_estres["recall_notumor"], marker="o",
+            label="Sin tumor reconocidos como sin tumor")
+    ax.axvspan(0.6, 1.4, color="grey", alpha=0.15, label="Rango del augmentation de train")
+    ax.set(title="Prueba de estrés de brillo (test)", xlabel="Factor de brillo",
+           ylabel="Fracción", ylim=(-0.02, 1.02))
+    ax.legend()
+    fig.tight_layout()
+    return fig
 
 
 def cargar_modelo(model_dir):
@@ -204,6 +254,15 @@ def main(argv=None):
         f"F1 {metricas['f1_macro']:.3f} | ROC-AUC {metricas['roc_auc_macro']:.3f}"
     )
     print(f"tumores como sanos: {metricas['tumores_como_sanos']}/{metricas['tumores_total']}")
+
+    df_estres = brightness_stress_test(model, df_test)
+    df_estres.to_csv(os.path.join(args.output_dir, "estres_brillo_test.csv"), index=False)
+    fig = plot_brightness_stress_test(df_estres)
+    fig.savefig(os.path.join(args.output_dir, "estres_brillo_test.png"), dpi=120)
+    plt.close(fig)
+
+    print("\nPrueba de estrés de brillo:")
+    print(df_estres.round(3).to_string(index=False))
 
 
 if __name__ == "__main__":
