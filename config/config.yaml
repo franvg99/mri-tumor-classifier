@@ -18,8 +18,11 @@ training:
   architecture: efficientnet_b0
   framework: pytorch
   batch_size: 32
-  epochs: TBD
-  learning_rate: TBD
+  epochs: 30  # techo; el early stopping corta antes (en la corrida del 25/10/2026, en la época 20)
+  patience: 5  # épocas sin mejora del recall de val antes de cortar
+  learning_rate: 0.001  # Adam; curvas suaves y sin oscilaciones en la corrida del 25/10/2026
+  optimizer: adam
+  early_stopping_metric: recall_macro_val  # métrica prioritaria del proyecto, no la loss
   instance_type: ml.m5.xlarge  # free tier — sin GPU, sin Spot
 
 inference:

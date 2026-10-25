@@ -10,7 +10,7 @@
 
 - **Arquitectura:** EfficientNet-B0 (backbone preentrenado en ImageNet, congelado)
 - **Framework:** PyTorch
-- **Técnica:** Transfer learning (backbone preentrenado en ImageNet + fine-tuning de capas superiores)
+- **Técnica:** Transfer learning con extracción de features: el backbone preentrenado en ImageNet queda congelado y solo se entrena la capa final de 4 clases (5.124 parámetros entrenables sobre 4.012.672 totales)
 - **Resolución de entrada:** 224×224 — elegida en el EDA (`notebooks/01_eda.ipynb`, sección 3) para alinear con la resolución preentrenada estándar de EfficientNet-B0/MobileNetV2 sobre ImageNet, aceptando upscaling en el 11.3% de las imágenes que llegan más chicas
 
 ## Dataset
@@ -18,6 +18,43 @@
 - **Fuente:** [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset)
 - **Clases:** Glioma, Meningioma, Pituitario, Sin tumor
 - **Split:** 70% train / 10% val / 20% test, estratificado por clase, seed fija (`config/config.yaml`). Deduplicado antes de dividir — el EDA encontró 4.72% de duplicados exactos. El test es más grande que el val para acotar el margen de error del recall por clase (~350 imágenes por clase en lugar de ~175); con el backbone congelado, la reducción del train tiene un costo bajo.
+
+## Entrenamiento
+
+- **Optimizador:** Adam, `learning_rate = 0.001`, batch de 32 imágenes.
+- **Función de pérdida:** `CrossEntropyLoss`.
+- **Criterio de parada:** early stopping sobre el recall promedio (macro) de validación,
+  con un techo de 30 épocas y una paciencia de 5. Se conserva el modelo de la mejor época,
+  no el de la última. Se eligió el recall en lugar de la loss por ser la métrica
+  prioritaria del proyecto.
+- **Corrida de referencia (25/10/2026, entorno local, CPU):** cortó en la época 20; la
+  mejor fue la 15. Duración total: 52 minutos (~2,6 minutos por época).
+
+Resultados en **validación** (701 imágenes) de la época 15. No reemplazan a las métricas
+de test de la sección siguiente: la validación se usó para elegir la época, por lo que su
+resultado es levemente optimista.
+
+| Clase | Recall en validación |
+|---|---|
+| Glioma | 83,2% |
+| Meningioma | 91,0% |
+| Pituitario | 98,9% |
+| Sin tumor | 98,2% |
+| **Promedio (macro)** | **92,8%** |
+
+Imágenes con tumor clasificadas como "Sin tumor" (el falso negativo clínicamente más
+grave): 3 de 533 (0,6%).
+
+Observaciones de las curvas:
+
+- La loss de validación desciende junto con la de train y no vuelve a subir: no hay
+  evidencia de sobreajuste. Una comparación sobre la época 1 dio el mismo recall promedio
+  en train (sin augmentation) y en validación (87%).
+- El recall de glioma y el de meningioma oscilan en sentidos opuestos entre épocas (en la
+  época 16, glioma sube a 94,4% y meningioma baja a 70,8%). Sugiere que el modelo confunde
+  estas dos clases entre sí; se confirmará con la matriz de confusión de test.
+- Desde la época 5 el recall promedio se mantiene entre 91% y 93%. La diferencia entre
+  las mejores épocas está dentro de la variación esperable para el tamaño de validación.
 
 ## Métricas de evaluación
 

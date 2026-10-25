@@ -24,6 +24,7 @@ SARTAJ + Br35H, ya dividido en Training/Testing por clase.
 - **Prototipado (Bimestre 1):** entorno local, Python, PyTorch
 - **Cloud (Bimestre 2):** AWS S3 (almacenamiento), Amazon SageMaker (entrenamiento e inferencia), dentro del **AWS Free Tier**
 - **Modelo:** Transfer learning con EfficientNet-B0 (backbone preentrenado en ImageNet, congelado)
+- **Entrenamiento:** Adam (`learning_rate = 0.001`), hasta 30 épocas con early stopping (paciencia 5) sobre el recall de validación
 
 ## Cronograma
 
@@ -81,7 +82,7 @@ Después abrí `notebooks/01_eda.ipynb` en VS Code y seleccioná el kernel `mri-
 
 ## Estado actual
 
-🚧 En desarrollo — Bimestre 1. Ya terminé el EDA (`notebooks/01_eda.ipynb`) y elegí framework (PyTorch) y arquitectura (EfficientNet-B0); mi próximo paso es definir `epochs`/`learning_rate` e implementar los stubs de modelado.
+🚧 En desarrollo — Bimestre 1. Ya terminé el EDA, el preprocesamiento y el entrenamiento del modelo (92,8% de recall promedio en validación; detalle en la [model card](docs/model_card.md)). Mi próximo paso es la evaluación sobre el conjunto de test: métricas por clase, matriz de confusión y prueba de estrés de brillo.
 
 ## Autor
 

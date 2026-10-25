@@ -47,7 +47,7 @@ hardcodeados.
 | Framework (PyTorch/TensorFlow) | **Resuelto: PyTorch** | Priorizo su vigencia en el mercado laboral y en investigación por sobre la curva de entrada más suave de Keras |
 | Arquitectura (EfficientNet-B0/MobileNetV2) | **Resuelto: EfficientNet-B0** | Con el backbone congelado la diferencia de costo es irrelevante; pesa más su mejor accuracy de transferencia, dado que la métrica prioritaria es el recall |
 | `image_size` | **Resuelto: 224×224** | Ver justificación abajo |
-| `epochs`, `learning_rate` | **Pendiente** | — |
+| `epochs`, `learning_rate` | **Resuelto (25/10/2026)** | Adam con `learning_rate = 0.001`; techo de 30 épocas con early stopping (paciencia 5) sobre el recall promedio de validación. En la corrida de referencia cortó en la época 20 y la mejor fue la 15. Resultados y curvas en la [model card](model_card.md) |
 | `s3_bucket`, `region` | **Pendiente** | Bloquea Bimestre 2 |
 | Split train/val/test | **Resuelto: 70/10/20** | Estratificado, seed fijo, deduplicado antes. Agrando el test para acotar el margen de error del recall por clase (±3.1 puntos en lugar de ±4.4) |
 | Augmentation | **Resuelto** | Rotación ±10°, zoom ±10%, brillo/contraste ±40%, sin flip. Ver hallazgos del EDA abajo |
@@ -207,8 +207,9 @@ basa está en `notebooks/02_preprocessing_debug.ipynb`, sección 4.
 
 ## Convenciones de código a respetar
 
-- `src/data/eda.py` es el único módulo de `src/` que ya implementé; el resto son stubs
-  con `NotImplementedError` cuyo docstring especifica el contrato a implementar.
+- Ya implementé `src/data/` (EDA, Dataset, split y augmentation), `src/models/architecture.py`
+  y `src/models/train.py`. El resto de `src/` son stubs con `NotImplementedError` cuyo
+  docstring especifica el contrato a implementar.
 - `src/inference/inference.py` implementa las 4 funciones fijas de SageMaker script mode
   (`model_fn`, `input_fn`, `predict_fn`, `output_fn`); nombres y firmas los impone
   SageMaker, no son negociables.
@@ -224,9 +225,10 @@ entorno (venv, kernel de Jupyter, credenciales de Kaggle).
 
 ## Próximos pasos
 
-1. Decidir framework y arquitectura (bloquea todo el modelado).
-2. Implementar los stubs de `preprocessing.py`, `augmentation.py`, `train.py`,
-   `evaluate.py` respetando sus docstrings y las decisiones que ya tomé arriba.
+1. Implementar `evaluate.py`: recall, precisión y F1 por clase, matriz de confusión,
+   ROC-AUC one-vs-rest y prueba de estrés de brillo, sobre el conjunto de test.
+2. Etiquetado manual de secuencias (T1/T2/FLAIR) sobre una muestra de test, idealmente
+   con un profesional médico (punto 6 de los hallazgos).
 3. Bimestre 2: subir a S3, resolver `s3_bucket`/`region`, portar `train.py` a SageMaker.
 
 ---

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-**`src/data/` ya está implementado** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests). **El resto de `src/` sigue siendo un esqueleto:** sus funciones y todos los entry points de `scripts/` levantan `NotImplementedError`, y sus tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
+**Ya están implementados `src/data/`** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests), **`src/models/architecture.py`** (con tests) y **`src/models/train.py`** (sin tests todavía). El modelo entrenado queda en `models/model.pth` junto con `historial.json` y `curvas_entrenamiento.png` (no versionados). **El resto de `src/` sigue siendo un esqueleto:** sus funciones y todos los entry points de `scripts/` levantan `NotImplementedError`, y sus tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
 
 `notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` verifica el split y el augmentation y reproduce los experimentos de los atajos del dataset (brillo y secuencias). `03_model_experiments.ipynb` sigue vacío, con solo un título en markdown.
 
@@ -52,7 +52,6 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 
 `config/config.yaml` marca con `TBD` lo que todavía no se decidió, y varios stubs dependen de eso:
 
-- **`epochs`**, **`learning_rate`** — sin definir.
 - **`s3_bucket`** y confirmación de `region` — sin definir.
 
 **Ya resuelto:**
@@ -62,6 +61,8 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 - `image_size` = 224, decidido en el EDA (sección 3 de `01_eda.ipynb`) para alinear con la resolución preentrenada de EfficientNet-B0/MobileNetV2 sobre ImageNet.
 - **Framework: PyTorch** (27/9/2026) — sobre TensorFlow, priorizando la vigencia de PyTorch en el mercado laboral (investigación, LLMs/Hugging Face) por sobre la curva de entrada más suave de Keras.
 - **Arquitectura: EfficientNet-B0** (27/9/2026) — sobre MobileNetV2. Con el backbone congelado no hay backward pass a través de él, así que la diferencia de costo entre ambas es irrelevante acá; en cambio la mejor accuracy de transferencia de EfficientNet-B0 pesa más dado que la métrica prioritaria es recall (contexto clínico).
+
+- **Entrenamiento** (25/10/2026): Adam, `learning_rate=0.001`, techo de 30 épocas con early stopping (paciencia 5) sobre el **recall macro de validación**, no la loss. La corrida de referencia cortó en la época 20, la mejor fue la 15 (recall val 92,8%; 3/533 tumores clasificados como notumor). El backbone se mantiene en `eval()` durante el entrenamiento para que sus BatchNorm no actualicen estadísticas (ver `train.modo_entrenamiento`).
 
 Todo actualizado en `config/config.yaml` y `docs/model_card.md`.
 
