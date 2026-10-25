@@ -162,6 +162,16 @@ Conclusiones:
   predecir "sin tumor". Es la forma de comprobar si el modelo final usa el atajo, algo
   que la métrica de test por sí sola no puede mostrar.
 
+**Resultado de la prueba de estrés (25/10/2026):** el brillo global no es la señal
+principal del modelo. Con las imágenes en su brillo original, el 1,3% de los tumores de
+test se predice como "sin tumor"; al aclararlas un 80% (factor 1,8, la relación de brillo
+medida entre notumor y glioma), esa proporción sube a 3,7%. Al oscurecer a la mitad las
+imágenes sin tumor, su reconocimiento baja apenas de 98,8% a 96,7%. Extendí el rango
+hasta 1,8 porque el augmentation ya cubre de 0,6 a 1,4 y dentro de ese rango la robustez
+es esperable por construcción. La prueba no descarta otros atajos de la fuente, en
+particular el tipo de secuencia (punto 6). Tabla completa en la
+[model card](model_card.md).
+
 ### 5. Duplicados exactos: 4.72% del dataset
 
 Con `detectar_duplicados()` encontré 340 archivos (153 grupos) duplicados byte a byte,
@@ -207,8 +217,8 @@ basa está en `notebooks/02_preprocessing_debug.ipynb`, sección 4.
 
 ## Convenciones de código a respetar
 
-- Ya implementé `src/data/` (EDA, Dataset, split y augmentation), `src/models/architecture.py`
-  y `src/models/train.py`. El resto de `src/` son stubs con `NotImplementedError` cuyo
+- Ya implementé `src/data/` (EDA, Dataset, split y augmentation) y `src/models/`
+  (`architecture.py`, `train.py`, `evaluate.py`). El resto de `src/` son stubs con `NotImplementedError` cuyo
   docstring especifica el contrato a implementar.
 - `src/inference/inference.py` implementa las 4 funciones fijas de SageMaker script mode
   (`model_fn`, `input_fn`, `predict_fn`, `output_fn`); nombres y firmas los impone
@@ -225,11 +235,14 @@ entorno (venv, kernel de Jupyter, credenciales de Kaggle).
 
 ## Próximos pasos
 
-1. Implementar `evaluate.py`: recall, precisión y F1 por clase, matriz de confusión,
-   ROC-AUC one-vs-rest y prueba de estrés de brillo, sobre el conjunto de test.
-2. Etiquetado manual de secuencias (T1/T2/FLAIR) sobre una muestra de test, idealmente
+1. Etiquetado manual de secuencias (T1/T2/FLAIR) sobre una muestra de test, idealmente
    con un profesional médico (punto 6 de los hallazgos).
+2. Tests de `train.py` (lógica de early stopping y congelamiento de BatchNorm).
 3. Bimestre 2: subir a S3, resolver `s3_bucket`/`region`, portar `train.py` a SageMaker.
+
+La evaluación sobre test (métricas por clase, matriz de confusión, ROC-AUC y prueba de
+estrés de brillo) quedó completa el 25/10/2026; los resultados están en la
+[model card](model_card.md).
 
 ---
 

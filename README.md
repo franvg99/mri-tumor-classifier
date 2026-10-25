@@ -82,7 +82,7 @@ Después abrí `notebooks/01_eda.ipynb` en VS Code y seleccioná el kernel `mri-
 
 ## Estado actual
 
-🚧 En desarrollo — Bimestre 1. Ya terminé el EDA, el preprocesamiento y el entrenamiento del modelo (92,8% de recall promedio en validación; detalle en la [model card](docs/model_card.md)). Mi próximo paso es la evaluación sobre el conjunto de test: métricas por clase, matriz de confusión y prueba de estrés de brillo.
+🚧 En desarrollo — Bimestre 1. Ya terminé el EDA, el preprocesamiento, el entrenamiento y la evaluación del modelo: **93,0% de recall promedio sobre test** (1,3% de tumores predichos como "sin tumor"), con una prueba de estrés de brillo que descarta el brillo como señal principal. Detalle en la [model card](docs/model_card.md). Queda pendiente el etiquetado manual de secuencias de resonancia, idealmente con un profesional médico.
 
 ## Autor
 

@@ -58,14 +58,76 @@ Observaciones de las curvas:
 
 ## Métricas de evaluación
 
-Priorizadas por contexto sanitario (un falso negativo es más costoso que un falso positivo):
+Priorizadas por contexto sanitario (un falso negativo es más costoso que un falso positivo).
+Calculadas sobre el conjunto de **test** (1.403 imágenes, 20% del dataset deduplicado),
+que no se utilizó para entrenar ni para elegir la época. Evaluación del 25/10/2026,
+reproducible con `python -m src.models.evaluate --data-dir <dataset>`.
 
-| Métrica | Valor | Justificación |
+| Métrica (macro) | Valor | Justificación |
 |---|---|---|
-| Recall / Sensibilidad | TBD | Minimizar falsos negativos (tumores no detectados) |
-| F1-Score | TBD | Balance entre precisión y recall por clase |
-| ROC-AUC | TBD | Capacidad de discriminación entre clases |
-| Matriz de confusión | TBD | Detalle de errores por clase |
+| Recall / Sensibilidad | 93,0% | Minimizar falsos negativos (tumores no detectados) |
+| Precisión | 93,3% | Proporción de aciertos entre las predicciones de cada clase |
+| F1-Score | 93,0% | Balance entre precisión y recall por clase |
+| ROC-AUC (one-vs-rest) | 0,990 | Capacidad de discriminación entre clases |
+| Accuracy | 92,9% | Referencia; no es la métrica prioritaria |
+
+Por clase (margen de error aproximado del recall: ±3 puntos, con ~350 imágenes por clase):
+
+| Clase | Recall | Precisión | F1 | ROC-AUC | Imágenes |
+|---|---|---|---|---|---|
+| Glioma | 86,6% | 96,6% | 91,3% | 0,987 | 357 |
+| Meningioma | 91,6% | 84,5% | 87,9% | 0,978 | 357 |
+| Pituitario | 95,2% | 96,0% | 95,6% | 0,997 | 353 |
+| Sin tumor | 98,8% | 96,0% | 97,4% | 0,998 | 336 |
+
+Matriz de confusión (filas: clase real; columnas: predicción):
+
+| | Glioma | Meningioma | Pituitario | Sin tumor |
+|---|---|---|---|---|
+| **Glioma** | 309 | 44 | 1 | 3 |
+| **Meningioma** | 8 | 327 | 12 | 10 |
+| **Pituitario** | 2 | 14 | 336 | 1 |
+| **Sin tumor** | 1 | 2 | 1 | 332 |
+
+Lectura de los resultados:
+
+- **El recall de test (93,0%) coincide con el de validación (92,8%):** el modelo
+  generaliza a imágenes no vistas y la elección de la época no infló el resultado.
+- **Confusión principal: glioma predicho como meningioma** (44 casos, 12% de los
+  gliomas), con una asimetría marcada (solo 8 meningiomas predichos como glioma).
+  Explica el recall más bajo de glioma y la precisión más baja de meningioma. Confirma
+  la oscilación entre ambas clases observada en las curvas de entrenamiento. En estos
+  casos el tumor se detecta, aunque se clasifica mal su tipo.
+- **Falsos negativos graves (tumor predicho como "Sin tumor"): 14 de 1.067 (1,3%).**
+  10 de los 14 son meningiomas. En validación habían sido 3 de 533 (0,6%); la diferencia
+  es compatible con la variabilidad esperable para conteos tan bajos.
+
+### Prueba de estrés de brillo
+
+Se multiplicó el brillo de todas las imágenes de test por distintos factores para
+verificar si el modelo usa el brillo como atajo (ver Limitaciones). El augmentation de
+train ya varía el brillo entre 0,6 y 1,4, por lo que el rango se extendió hasta 1,8, la
+relación de brillo medio entre "Sin tumor" y glioma medida en el EDA.
+
+| Factor de brillo | Tumores predichos como "Sin tumor" | "Sin tumor" reconocidos |
+|---|---|---|
+| 0,50 | 1,4% | 96,7% |
+| 0,75 | 1,4% | 98,2% |
+| 1,00 (original) | 1,3% | 98,8% |
+| 1,25 | 1,8% | 98,2% |
+| 1,50 | 2,5% | 98,8% |
+| 1,80 | 3,7% | 98,8% |
+
+- **El brillo no es la señal principal del modelo.** Oscurecer a la mitad las imágenes
+  sin tumor apenas reduce su reconocimiento (98,8% → 96,7%), y aclarar las imágenes con
+  tumor no provoca un desplazamiento masivo hacia "Sin tumor".
+- **Existe una sensibilidad leve, que crece fuera del rango del augmentation.** Con un
+  factor de 1,8, los falsos negativos graves pasan de 1,3% a 3,7% (de 14 a ~40 imágenes).
+  Parte de ese aumento puede deberse a la saturación de píxeles en blanco, que degrada la
+  imagen, y no exclusivamente al atajo.
+- **Alcance de la prueba:** solo evalúa el brillo global. No descarta que el modelo use
+  otras características propias de la fuente, en particular el tipo de secuencia de
+  resonancia (ver Limitaciones), que requiere un etiquetado manual.
 
 ## Limitaciones
 
@@ -89,8 +151,14 @@ Priorizadas por contexto sanitario (un falso negativo es más costoso que un fal
   imagen T2 con tumor produciría un falso negativo. El augmentation de intensidad no
   corrige esta diferencia. Se evaluará con un etiquetado manual de secuencias sobre una
   muestra de test.
-- El resto de las limitaciones (basadas en resultados de entrenamiento y evaluación) se
-  completan en fase de modelado.
+  La prueba de estrés de brillo (25/10/2026) mostró que el brillo global no es la señal
+  principal del modelo, aunque existe una sensibilidad leve fuera del rango del
+  augmentation (ver Métricas de evaluación).
+- **Confusión entre glioma y meningioma:** el 12% de los gliomas de test se clasifica
+  como meningioma. El tumor se detecta, pero el tipo informado no es confiable en esos
+  casos.
+- **Falsos negativos graves concentrados en meningioma:** 10 de los 14 tumores de test
+  predichos como "Sin tumor" son meningiomas.
 
 ## Uso previsto
 
