@@ -19,7 +19,7 @@ pip install -r requirements.txt
 
 pytest                                        # todos los tests
 pytest tests/test_model.py                    # un archivo
-pytest tests/test_model.py::test_build_model_output_shape_placeholder  # un test
+pytest tests/test_model.py::test_build_model_output_shape  # un test
 ```
 
 No hay linter, formateador ni Makefile configurados en el proyecto. `pytest.ini` agrega la raíz al `sys.path` (`pythonpath = .`) para que los tests importen `src`; sin él, `pytest` a secas falla en la recolección.
