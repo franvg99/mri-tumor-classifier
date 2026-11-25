@@ -12,6 +12,7 @@ python-dotenv
 # AWS
 boto3
 botocore[crt]
+pyyaml
 sagemaker
 
 # Deep learning
