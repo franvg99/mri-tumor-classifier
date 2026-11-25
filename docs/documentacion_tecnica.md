@@ -26,17 +26,18 @@ congelado. Ver [`README.md`](../README.md) para el objetivo general y el cronogr
 ```mermaid
 flowchart LR
     subgraph B1["Bimestre 1 · Local"]
-        A["Kaggle\n(dataset)"] --> B["EDA"] --> C["Preprocesamiento"] --> D["Augmentation"] --> E["Entrenamiento"] --> F["Evaluación"]
+        A["Kaggle\n(dataset)"] --> B["EDA"] --> C["Preprocesamiento"] --> D["Augmentation"] --> E["Entrenamiento"] --> F["Evaluación"] --> K["Empaquetado"]
     end
     subgraph B2["Bimestre 2 · AWS"]
-        G["S3"] --> H["SageMaker\nTraining Job"] --> I["Model\nRegistry"] --> J["SageMaker\nEndpoint"]
+        G["S3"] --> J["SageMaker\nEndpoint"]
     end
-    F --> G
+    K --> G
 ```
 
-Divido el proyecto en dos fases con una regla de diseño central: **el mismo código de
-`src/data/preprocessing.py` y `src/models/train.py` corre sin modificarse en ambas** —
-prototipado local (Bimestre 1) y SageMaker (Bimestre 2). Por eso `train.py` lee
+Divido el proyecto en dos fases con una regla de diseño central: **el mismo código tiene
+que poder correr en ambas**, prototipado local (Bimestre 1) y SageMaker (Bimestre 2). El
+endpoint reutiliza el preprocesamiento y la arquitectura de `src/` sin modificarlos. Con
+el mismo criterio, aunque todavía no se ejecutó en SageMaker, `train.py` lee
 hiperparámetros y paths desde variables de entorno/CLI (convención SageMaker), nunca
 hardcodeados.
 
@@ -48,7 +49,9 @@ hardcodeados.
 | Arquitectura (EfficientNet-B0/MobileNetV2) | **Resuelto: EfficientNet-B0** | Con el backbone congelado la diferencia de costo es irrelevante; pesa más su mejor accuracy de transferencia, dado que la métrica prioritaria es el recall |
 | `image_size` | **Resuelto: 224×224** | Ver justificación abajo |
 | `epochs`, `learning_rate` | **Resuelto (25/10/2026)** | Adam con `learning_rate = 0.001`; techo de 30 épocas con early stopping (paciencia 5) sobre el recall promedio de validación. En la corrida de referencia cortó en la época 20 y la mejor fue la 15. Resultados y curvas en la [model card](model_card.md) |
-| `s3_bucket`, `region` | **Pendiente** | Bloquea Bimestre 2 |
+| `s3_bucket`, `region` | **Resuelto (25/11/2026)** | Bucket privado `mri-tumor-classifier-fg-2026` en `us-east-2`, la región que AWS asigna al proyecto y que no puede modificarse |
+| Origen del modelo desplegado | **Resuelto (25/11/2026)** | Se despliega el modelo entrenado y evaluado localmente; ver [arquitectura](architecture.md) |
+| Respuesta del endpoint | **Resuelto (25/11/2026)** | Clase, su probabilidad y las 4 probabilidades, para ver la segunda opción del modelo (relevante por la confusión entre glioma y meningioma) |
 | Split train/val/test | **Resuelto: 70/10/20** | Estratificado, seed fijo, deduplicado antes. Agrando el test para acotar el margen de error del recall por clase (±3.1 puntos en lugar de ±4.4) |
 | Augmentation | **Resuelto** | Rotación ±10°, zoom ±10%, brillo/contraste ±40%, sin flip. Ver hallazgos del EDA abajo |
 
@@ -217,16 +220,16 @@ basa está en `notebooks/02_preprocessing_debug.ipynb`, sección 4.
 
 ## Convenciones de código a respetar
 
-- Ya implementé `src/data/` (EDA, Dataset, split y augmentation) y `src/models/`
-  (`architecture.py`, `train.py`, `evaluate.py`). El resto de `src/` son stubs con `NotImplementedError` cuyo
-  docstring especifica el contrato a implementar.
+- Ya implementé `src/data/`, `src/models/` y `src/inference/`, y en `scripts/` el
+  empaquetado, el rol de IAM y el despliegue. Siguen como stubs con `NotImplementedError`
+  `src/pipeline/`, `scripts/launch_training_job.py` y `scripts/upload_to_s3.py`.
 - `src/inference/inference.py` implementa las 4 funciones fijas de SageMaker script mode
   (`model_fn`, `input_fn`, `predict_fn`, `output_fn`); nombres y firmas los impone
   SageMaker, no son negociables.
 - `src/pipeline/sagemaker_pipeline.py` lo dejo como stretch goal opcional, no prioritario.
-- Las restricciones duras de infra (on-demand sin Spot, sin GPU, preprocesamiento en
-  Studio Notebook y no en Processing Job) están detalladas en `architecture.md` — no son
-  preferencias de estilo, son lo que mantiene el proyecto dentro del free tier de AWS.
+- El endpoint se elimina después de cada prueba (`deploy_endpoint.py borrar`): factura por
+  hora aunque no reciba solicitudes. El resto de las decisiones de infraestructura está en
+  `architecture.md`.
 
 ## Setup y comandos
 
@@ -238,7 +241,7 @@ entorno (venv, kernel de Jupyter, credenciales de Kaggle).
 1. Etiquetado manual de secuencias (T1/T2/FLAIR) sobre una muestra de test, idealmente
    con un profesional médico (punto 6 de los hallazgos).
 2. Tests de `train.py` (lógica de early stopping y congelamiento de BatchNorm).
-3. Bimestre 2: subir a S3, resolver `s3_bucket`/`region`, portar `train.py` a SageMaker.
+3. Entrenamiento en SageMaker (opcional): depende de la cuota solicitada a AWS.
 
 La evaluación sobre test (métricas por clase, matriz de confusión, ROC-AUC y prueba de
 estrés de brillo) quedó completa el 25/10/2026; los resultados están en la

@@ -32,6 +32,9 @@ resultados) la tomé y validé yo, no la delegué.
 - **Búsqueda de información puntual:** por ejemplo, confirmar la composición por fuente
   del dataset de Kaggle (qué clase proviene de qué dataset original), que después resultó
   relevante para una decisión de diseño (ver más abajo).
+- **Despliegue en AWS:** la IA escribió el código de inferencia, empaquetado, permisos y
+  despliegue, y ejecutó los comandos. La cuenta, el inicio de sesión y la autorización
+  previa de la creación de recursos y del gasto estuvieron a mi cargo.
 - **Ejecución y lectura de resultados:** correr celdas, generar gráficos comparativos,
   resumir salidas numéricas para agilizar la discusión.
 
@@ -63,6 +66,13 @@ Ejemplos concretos de esta misma colaboración, no afirmaciones genéricas:
   tumor y la clase sin tumor parecen provenir de secuencias de resonancia distintas (T1
   frente a T2/FLAIR), lo que terminó acotando el uso previsto del modelo. El experimento
   es reproducible en `notebooks/02_preprocessing_debug.ipynb`.
+- **Un faltante que detecté al releer el proyecto.** Al revisar la documentación noté que
+  ningún notebook mostraba el modelo, porque el entrenamiento se había ejecutado desde la
+  terminal. Esa observación dio origen a `notebooks/03_model_experiments.ipynb`.
+- **Cambio de plan en el despliegue.** La IA había planteado el entrenamiento en SageMaker
+  como paso previo a publicar. Pregunté por qué no publicar directamente el modelo ya
+  entrenado y evaluado. El plan cambió: el despliegue dejó de depender de una cuota que
+  AWS todavía no había aprobado.
 - **Todas las decisiones de diseño abiertas** (`image_size`, exclusión del flip
   horizontal en el augmentation, migración del flujo de trabajo de Google Colab a un
   entorno local, proporciones del split, no balancear las clases tras deduplicar,

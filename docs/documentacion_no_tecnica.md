@@ -51,8 +51,8 @@ admite — el recall es la métrica que expone esa falla.
 
 ## Limitaciones conocidas hasta ahora
 
-Las encontré durante el análisis exploratorio de los datos (EDA), antes incluso de
-entrenar el modelo:
+Las tres primeras surgieron del análisis exploratorio de los datos (EDA),
+antes de entrenar el modelo; las últimas, de evaluarlo:
 
 - **El dataset combina 3 fuentes distintas de imágenes**, y la clase "Sin tumor" viene
   enteramente de una fuente diferente a las tres clases con tumor. Detecté diferencias
@@ -62,29 +62,71 @@ entrenar el modelo:
   (variar artificialmente el brillo/contraste durante el entrenamiento), pero es una
   limitación estructural del dataset que no puedo eliminar del todo. Lo medí: un
   programa muy simple que solo mira el brillo y el contraste de cada imagen, sin ver
-  ningún tumor, acierta la clase en el 63% de los casos (al azar acertaría el 25%).
+  ningún tumor, acierta la clase en el 63% de los casos (al azar acertaría el 25%). Después de entrenar
+  el modelo, lo puse a prueba modificando el brillo de las imágenes: el brillo no es la
+  señal principal que utiliza, aunque existe una sensibilidad leve.
 - **Las imágenes con tumor y las sin tumor parecen provenir de secuencias de resonancia
   distintas.** Las imágenes con tumor se ven casi todas como T1 con contraste, mientras
   que las "sin tumor" mezclan T1, T2 y FLAIR. Lo identifiqué a simple vista y me
   interesa especialmente que lo confirme un profesional médico. Si se confirma, el
   modelo podría aprender a asociar "aspecto de T2" con "sin tumor", y ante una T2 con
   tumor respondería "sin tumor", que es justamente el error más grave. Por eso limito el
-  uso del modelo a imágenes T1 con contraste, y en la evaluación voy a clasificar a mano
-  una muestra de imágenes por secuencia para medir si el modelo cae en este atajo.
+  uso del modelo a imágenes T1 con contraste. Medir si el modelo cae en este atajo requiere
+  clasificar a mano una muestra de imágenes por secuencia, y sigue pendiente.
 - **Las imágenes no vienen etiquetadas con el tipo de corte** (axial, sagital o coronal),
   y el dataset mezcla los tres sin indicarlo.
-- Los resultados de desempeño real (qué tan bien clasifica) todavía no existen — el
-  modelo no está entrenado. Actualizo este documento cuando tenga métricas concretas.
+- **Confunde gliomas con meningiomas.** El 12% de los gliomas se clasifica como
+  meningioma. En esos casos el modelo detecta un tumor, pero informa mal de qué tipo es.
+- **Una probabilidad alta no garantiza una respuesta correcta.** Hay casos en los que el
+  modelo se equivoca con mucha seguridad aparente.
+
+## Resultados obtenidos
+
+Evalué el modelo con 1.403 imágenes que no utilicé para entrenarlo:
+
+| De cada 100 imágenes de... | El modelo reconoce correctamente |
+|---|---|
+| Glioma | 87 |
+| Meningioma | 92 |
+| Tumor pituitario | 95 |
+| Sin tumor | 99 |
+
+El promedio de las cuatro categorías es **93%**. El error más grave, indicar "sin tumor"
+cuando había uno, ocurrió en **14 de 1.067 imágenes con tumor (1,3%)**; 10 de esas 14 son
+meningiomas.
+
+Estos valores corresponden a imágenes del mismo dataset público. No indican cómo se
+comportaría el modelo con imágenes de un hospital.
+
+## Cómo se publicó en la nube
+
+Hasta ese momento el modelo solo funcionaba en mi computadora. Para demostrar que puede
+ofrecerse como servicio, lo publiqué en AWS, la plataforma de Amazon que permite alquilar
+computadoras por tiempo:
+
+1. Guardé el modelo en un espacio de almacenamiento privado.
+2. Creé un permiso limitado, para que el servicio que lo ejecuta solo pueda leer ese
+   archivo.
+3. Encendí una computadora en la nube que recibe una imagen y responde la categoría más
+   probable, junto con la probabilidad de cada una.
+4. Envié 40 imágenes de prueba: las 40 respuestas coincidieron con las de mi computadora.
+5. La apagué al terminar, porque se cobra por hora aunque nadie la utilice. Estuvo
+   encendida 8 minutos, con un costo estimado de 3 centavos de dólar.
+
+Esta es una respuesta real del servicio. La imagen era un glioma y el modelo respondió
+"glioma", con una probabilidad de 98,9%:
+
+![Respuesta real del servicio](evidencias_aws/10_prediccion_real.png)
 
 ## Estado actual del proyecto
 
 Ya terminé el análisis exploratorio de datos (EDA), elegí la tecnología y el modelo base
 (PyTorch y EfficientNet-B0), y preparé los datos: eliminé las imágenes repetidas, separé
 las imágenes en grupos de entrenamiento, validación y prueba, y definí las variaciones
-artificiales que se aplican durante el entrenamiento. Todavía no entrené el modelo —
-ese es el próximo paso. Ver
-[`model_card.md`](model_card.md) para el detalle técnico-formal del modelo (que hoy tiene
-varios campos pendientes, justamente porque el modelo todavía no existe).
+artificiales que se aplican durante el entrenamiento. Después entrené el modelo, lo
+evalué y lo publiqué en la nube. Queda pendiente que un profesional médico revise una
+muestra de imágenes para identificar el tipo de secuencia de resonancia. Ver
+[`model_card.md`](model_card.md) para el detalle técnico-formal del modelo.
 
 ---
 

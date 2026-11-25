@@ -2,7 +2,7 @@
 
 # Model Card
 
-> Documento a completar durante la fase de modelado (Bimestre 1 - prototipado / Bimestre 2 - versión final en AWS).
+> Ficha técnica del modelo entrenado el 25/10/2026 y desplegado en AWS el 25/11/2026.
 > Para el razonamiento detrás de cada decisión ya tomada, ver
 > [`documentacion_tecnica.md`](documentacion_tecnica.md).
 
@@ -47,13 +47,14 @@ grave): 3 de 533 (0,6%).
 
 Observaciones de las curvas:
 
-- La loss de validación desciende junto con la de train y no vuelve a subir: no hay
-  evidencia de sobreajuste. Una comparación sobre la época 1 dio el mismo recall promedio
+- La loss de validación desciende junto con la de train y termina cerca de ella: no hay
+  señales claras de sobreajuste. Sube levemente entre las épocas 17 y 20 (de 0,201 a
+  0,224), un movimiento similar a las oscilaciones anteriores. Una comparación sobre la época 1 dio el mismo recall promedio
   en train (sin augmentation) y en validación (87%).
 - El recall de glioma y el de meningioma oscilan en sentidos opuestos entre épocas (en la
   época 16, glioma sube a 94,4% y meningioma baja a 70,8%). Sugiere que el modelo confunde
   estas dos clases entre sí; se confirmará con la matriz de confusión de test.
-- Desde la época 5 el recall promedio se mantiene entre 91% y 93%. La diferencia entre
+- Desde la época 5 el recall promedio se mantiene entre 90,7% y 92,8%. La diferencia entre
   las mejores épocas está dentro de la variación esperable para el tamaño de validación.
 
 ## Métricas de evaluación
@@ -159,6 +160,14 @@ relación de brillo medio entre "Sin tumor" y glioma medida en el EDA.
   casos.
 - **Falsos negativos graves concentrados en meningioma:** 10 de los 14 tumores de test
   predichos como "Sin tumor" son meningiomas.
+
+## Despliegue
+
+El modelo evaluado en esta ficha es el mismo que se publicó en un endpoint de SageMaker el
+25/11/2026 (`ml.m5.xlarge`, CPU, PyTorch 2.6). El código de inferencia reproduce la matriz
+de confusión de test en local, y el endpoint dio la misma clase que el modelo local en 40
+de 40 imágenes de test. El endpoint se eliminó al terminar la prueba. Detalle en
+[arquitectura](architecture.md).
 
 ## Uso previsto
 

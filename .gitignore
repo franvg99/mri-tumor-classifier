@@ -22,6 +22,8 @@ env/
 *.jpg
 *.jpeg
 *.png
+# Excepción: capturas de AWS que la documentación muestra (docs/evidencias_aws/extra/ no se versiona)
+!/docs/evidencias_aws/*.png
 *.npy
 *.h5
 *.pt

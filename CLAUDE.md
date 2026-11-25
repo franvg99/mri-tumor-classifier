@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del repositorio
 
-**Ya están implementados `src/data/`** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests), **`src/models/architecture.py`** y **`src/models/evaluate.py`** (con tests) y **`src/models/train.py`** (sin tests todavía). El modelo entrenado queda en `models/model.pth` junto con `historial.json`, `curvas_entrenamiento.png`, `metricas_test.json`, `matriz_confusion_test.png` y `estres_brillo_test.{csv,png}` (no versionados). Resultados de test (25/10/2026) en `docs/model_card.md`: recall macro 93,0%, 14/1.067 tumores predichos como notumor, glioma→meningioma es la confusión principal. **El resto de `src/` sigue siendo un esqueleto:** sus funciones y todos los entry points de `scripts/` levantan `NotImplementedError`, y sus tests son `pytest.skip()`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
+**Ya están implementados `src/data/`** (`eda.py`, `dataset.py`, `preprocessing.py`, `augmentation.py`, con tests), **`src/models/architecture.py`** y **`src/models/evaluate.py`** (con tests) **`src/models/train.py`** (sin tests todavía), **`src/inference/`** y, en `scripts/`, `package_model.py`, `create_sagemaker_role.py` y `deploy_endpoint.py` (con tests, salvo el rol). El modelo entrenado queda en `models/model.pth` junto con `historial.json`, `curvas_entrenamiento.png`, `metricas_test.json`, `matriz_confusion_test.png` y `estres_brillo_test.{csv,png}` (no versionados). Resultados de test (25/10/2026) en `docs/model_card.md`: recall macro 93,0%, 14/1.067 tumores predichos como notumor, glioma→meningioma es la confusión principal. El endpoint se desplegó, se probó y se eliminó el 25/11/2026 (ver `docs/architecture.md`). **Siguen siendo esqueletos** `src/pipeline/sagemaker_pipeline.py`, `scripts/launch_training_job.py` y `scripts/upload_to_s3.py`: levantan `NotImplementedError`. Sus docstrings NO describen comportamiento existente: describen el contrato que hay que implementar y en qué fase corresponde hacerlo. Al trabajar en esos stubs, la tarea típica es completarlos respetando su docstring, no refactorizar código que ya anda.
 
-`notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` verifica el split y el augmentation y reproduce los experimentos de los atajos del dataset (brillo y secuencias). `03_model_experiments.ipynb` sigue vacío, con solo un título en markdown.
+`notebooks/01_eda.ipynb` ya tiene el EDA armado y anda de punta a punta en local. `02_preprocessing_debug.ipynb` verifica el split y el augmentation y reproduce los experimentos de los atajos del dataset (brillo y secuencias). `03_model_experiments.ipynb` tiene las secciones de arquitectura y entrenamiento; faltan evaluación, análisis de errores y prueba de brillo.
 
 El repo ya está inicializado (`.git/` existe) con remoto en GitHub (`franvg99/mri-tumor-classifier`).
 
@@ -50,11 +50,10 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 
 ## Decisiones pendientes (no asumirlas)
 
-`config/config.yaml` marca con `TBD` lo que todavía no se decidió, y varios stubs dependen de eso:
-
-- **`s3_bucket`** y confirmación de `region` — sin definir.
+- **Entrenamiento en SageMaker:** sin definir. La cuota de Training Jobs es 0 (aumento solicitado el 25/11/2026) y falta confirmar con el tutor si es requisito.
 
 **Ya resuelto:**
+- **AWS** (25/11/2026): bucket privado `mri-tumor-classifier-fg-2026`, región `us-east-2` (asignada por AWS, no se puede cambiar), perfil local `mri-tumor` con `aws login`. Se despliega el modelo entrenado localmente.
 - **Split 70/10/20** (19/10/2026), estratificado, deduplicado antes, `seed=42` — test agrandado para acotar el margen de error del recall por clase. `split_dataset(df)` recibe el DataFrame de `eda.listar_imagenes()` y devuelve 3 DataFrames.
 - **Sin balanceo de clases** tras deduplicar (ratio 1.06; justificado en `docs/documentacion_tecnica.md`, punto 1).
 - **Augmentation:** `RandomAffine(±10°, zoom ±10%)` + `ColorJitter(brillo/contraste 0.4)`, sin flip.
@@ -66,7 +65,7 @@ Kaggle dejó de usar el par `username`/`key` del `kaggle.json` viejo; ahora es u
 
 Todo actualizado en `config/config.yaml` y `docs/model_card.md`.
 
-Al resolver alguna de las pendientes, actualizá `config/config.yaml`, `docs/model_card.md` y la sección de stack del `README.md`, que hoy las listan como TBD en paralelo.
+Al resolver alguna de las pendientes, actualizá `config/config.yaml`, `docs/model_card.md` y la sección de stack del `README.md`, que la listan en paralelo.
 
 ## Arquitectura
 
@@ -86,6 +85,8 @@ La regla de diseño central es que **el mismo código corre en los dos entornos 
 - `src/pipeline/sagemaker_pipeline.py` es un stretch goal opcional. No lo priorices.
 
 ### Restricciones duras del AWS Free Tier
+
+**La cuenta del proyecto usa el plan gratuito vigente** (US$ 100 de crédito, vence el 25/05/2027), no el esquema de horas mensuales descripto abajo, que es el del diseño original y no se verificó que aplique. Calcular los costos a precio completo. No activar las "funciones avanzadas" de la cuenta: es irreversible.
 
 Estas no son preferencias, son las que hacen que el proyecto no genere costo. Si escribís código de infra, respetalas:
 
