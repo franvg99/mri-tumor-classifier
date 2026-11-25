@@ -110,9 +110,10 @@ Lectura de los resultados:
   Explica el recall más bajo de glioma y la precisión más baja de meningioma. En estos
   casos el tumor se detecta, aunque se clasifica mal su tipo.
 - **Falsos negativos graves (tumor predicho como "Sin tumor"): 13 de 1.031 (1,3%).**
-  9 de los 13 son meningiomas.
+  9 de los 13 son meningiomas, y son 10 imágenes distintas (tres aparecen repetidas). No se
+  reparten al azar: ver [Errores según el tamaño](#errores-según-el-tamaño-de-la-imagen).
 - **"Sin tumor" se mide sobre solo 115 imágenes**, por lo que su recall tiene un margen de
-  unos ±3,4 puntos.
+  unos ±3,3 puntos.
 
 ### Efecto de las copias entre train y test
 
@@ -143,6 +144,30 @@ grises y a 32×32 píxeles, es de 0,999 o más (`src/data/similitud.py`).
 | 0,995 | 1.128 | 92,4% | 96,0% (99) | 13 de 1.029 |
 | **0,999** | **1.146** | **92,5%** | **96,5% (115)** | **13 de 1.031** |
 | Sin excluir | 1.403 | 93,0% | 98,8% (336) | 14 de 1.067 |
+
+### Errores según el tamaño de la imagen
+
+El modelo no conoce el tamaño original, porque toda imagen se lleva a 224×224. En este
+dataset, sin embargo, el tamaño acompaña a la fuente de origen: entre el 93% y el 98% de las
+imágenes con tumor de test mide exactamente 512 px, y ninguna imagen sin tumor lo hace.
+
+| Imágenes de test sin copia | Imágenes | Predichas como "Sin tumor" |
+|---|---|---|
+| Con tumor, 300 px o más | 1.008 | 3 (0,3%) |
+| Con tumor, menos de 300 px | 23 | **10 (43,5%)** |
+| Sin tumor, 300 px o más | 32 | 31 (96,9%) |
+| Sin tumor, menos de 300 px | 83 | 80 (96,4%) |
+
+- **El 1,3% general oculta dos situaciones muy distintas.** Vale sobre todo para imágenes como
+  las de la fuente principal, y no puede trasladarse a otras.
+- **Es compatible con el atajo de la fuente** descrito en Limitaciones: los tumores cuyo
+  aspecto se parece al de las imágenes sin tumor se confunden con ellas.
+- **Alcance:** es una asociación y no prueba la causa, porque el tamaño, la fuente y la
+  secuencia varían juntos. Con 23 casos (algunos repetidos), el 43,5% es muy impreciso:
+  aproximadamente entre 26% y 63%. El modelo no responde solo al tamaño, ya que reconoce 31 de
+  las 32 imágenes sin tumor de 300 px o más.
+
+Análisis completo en `notebooks/03_model_experiments.ipynb`, sección 4.
 
 ### Prueba de estrés de brillo
 
@@ -209,8 +234,10 @@ medio entre "Sin tumor" y glioma medida en el EDA.
 - **Confusión entre glioma y meningioma:** el 12% de los gliomas de test se clasifica
   como meningioma. El tumor se detecta, pero el tipo informado no es confiable en esos
   casos.
-- **Falsos negativos graves concentrados en meningioma:** 9 de los 13 tumores de test
-  predichos como "Sin tumor" son meningiomas.
+- **Falsos negativos graves concentrados en un tipo de imagen:** 10 de los 13 tumores de test
+  predichos como "Sin tumor" miden menos de 300 px, cuando solo 23 de los 1.031 tumores
+  tienen ese tamaño. 9 de los 13 son meningiomas. La tasa general de 1,3% no es aplicable a
+  imágenes de otras fuentes.
 
 ## Despliegue
 

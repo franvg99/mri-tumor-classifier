@@ -80,6 +80,11 @@ antes de entrenar el modelo; las últimas, de evaluarlo:
 - **El dataset contiene muchas imágenes repetidas.** De unas 1.680 imágenes "sin tumor",
   solo alrededor de 860 son realmente distintas. La evaluación corregida las excluye, pero el
   modelo se entrenó con ellas.
+- **El error más grave se concentra en un tipo de imagen.** Casi todas las imágenes con tumor
+  del dataset son grandes, y ninguna imagen sana tiene ese mismo tamaño, porque provienen de
+  fuentes distintas. En los pocos tumores con imágenes chicas, similares a las de las personas
+  sanas, el modelo respondió "sin tumor" en 10 de 23 casos. Es una señal de que en parte
+  reconoce el origen de la imagen y no solo la enfermedad.
 - **Una probabilidad alta no garantiza una respuesta correcta.** Hay casos en los que el
   modelo se equivoca con mucha seguridad aparente.
 
@@ -107,7 +112,8 @@ Las excluí y volví a calcular. El reconocimiento de los tumores casi no cambi�
 tumor" bajó de 99 a 97 de cada 100.
 
 Estos valores corresponden a imágenes del mismo dataset público. No indican cómo se
-comportaría el modelo con imágenes de un hospital.
+comportaría el modelo con imágenes de un hospital: en las imágenes con tumor más parecidas
+a las de personas sanas, el error grave fue mucho más frecuente (ver Limitaciones).
 
 ## Cómo se publicó en la nube
 

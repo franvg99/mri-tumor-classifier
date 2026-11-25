@@ -250,6 +250,24 @@ clases con tumor casi no varían. Detalle y sensibilidad al umbral en la
   caso hay que volver a evaluar el balance de clases (punto 1): notumor tiene alrededor de 863
   imágenes distintas sobre 1.681.
 
+### 8. Los falsos negativos se concentran en las imágenes chicas (25/11/2026)
+
+Al mirar los 13 tumores de test predichos como "sin tumor" encontré que 10 miden menos de 300 px,
+un tamaño poco frecuente entre los tumores (23 de 1.031) y habitual en notumor (83 de 115). De
+los tumores chicos, 10 de 23 se predicen como sin tumor (43,5%; intervalo aproximado: 26% a 63%);
+de los demás, 3 de 1.008 (0,3%).
+
+El tamaño no llega al modelo, pero acompaña a la fuente: es compatible con el atajo de los puntos
+4 y 6. No prueba la causa, porque tamaño, fuente y secuencia varían juntos. El análisis está en
+`notebooks/03_model_experiments.ipynb`, sección 4.
+
+**Decisiones derivadas:**
+
+- La [model card](model_card.md) informa la tasa de falsos negativos graves por separado, además
+  de la general.
+- El etiquetado manual de secuencias (punto 6) pasa a incluir estas imágenes: permitiría saber si
+  el factor es la secuencia.
+
 ## Convenciones de código a respetar
 
 - Ya implementé `src/data/`, `src/models/` y `src/inference/`, y en `scripts/` el
