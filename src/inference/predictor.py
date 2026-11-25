@@ -4,7 +4,7 @@ Cliente simple para invocar el endpoint de SageMaker ya desplegado
 """
 
 
-def predict_image(image_path: str, endpoint_name: str, region: str = "us-east-1"):
+def predict_image(image_path: str, endpoint_name: str, region: str = "us-east-2"):
     """Envía una imagen al endpoint y devuelve la respuesta JSON
     {clase, probabilidad, probabilidades}.
 

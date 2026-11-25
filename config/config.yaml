@@ -1,8 +1,8 @@
 # Configuración del proyecto — completar a medida que avancen las fases
 
 aws:
-  region: us-east-1  # TBD
-  s3_bucket: TBD
+  region: us-east-2  # asignada por AWS al proyecto; no se puede cambiar
+  s3_bucket: mri-tumor-classifier-fg-2026
   s3_raw_prefix: raw/
   s3_processed_prefix: processed/
   s3_models_prefix: models/
