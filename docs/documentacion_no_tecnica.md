@@ -77,23 +77,34 @@ antes de entrenar el modelo; las últimas, de evaluarlo:
   y el dataset mezcla los tres sin indicarlo.
 - **Confunde gliomas con meningiomas.** El 12% de los gliomas se clasifica como
   meningioma. En esos casos el modelo detecta un tumor, pero informa mal de qué tipo es.
+- **El dataset contiene muchas imágenes repetidas.** De unas 1.680 imágenes "sin tumor",
+  solo alrededor de 860 son realmente distintas. La evaluación corregida las excluye, pero el
+  modelo se entrenó con ellas.
 - **Una probabilidad alta no garantiza una respuesta correcta.** Hay casos en los que el
   modelo se equivoca con mucha seguridad aparente.
 
 ## Resultados obtenidos
 
-Evalué el modelo con 1.403 imágenes que no utilicé para entrenarlo:
+Evalué el modelo con 1.146 imágenes que no utilicé para entrenarlo y que no tienen una copia
+casi idéntica entre las de entrenamiento:
 
 | De cada 100 imágenes de... | El modelo reconoce correctamente |
 |---|---|
 | Glioma | 87 |
-| Meningioma | 92 |
+| Meningioma | 91 |
 | Tumor pituitario | 95 |
-| Sin tumor | 99 |
+| Sin tumor | 97 |
 
-El promedio de las cuatro categorías es **93%**. El error más grave, indicar "sin tumor"
-cuando había uno, ocurrió en **14 de 1.067 imágenes con tumor (1,3%)**; 10 de esas 14 son
+El promedio de las cuatro categorías es **92,5%**. El error más grave, indicar "sin tumor"
+cuando había uno, ocurrió en **13 de 1.031 imágenes con tumor (1,3%)**; 9 de esas 13 son
 meningiomas.
+
+**Una corrección importante.** La primera evaluación había dado 93,0%. Después descubrí que
+257 imágenes de prueba tenían una copia casi idéntica entre las de entrenamiento: la misma
+resonancia, guardada con otro contraste o nitidez. Es como si en un examen aparecieran
+ejercicios que ya estaban en la guía de estudio: acertarlos no demuestra haber aprendido.
+Las excluí y volví a calcular. El reconocimiento de los tumores casi no cambió; el de "sin
+tumor" bajó de 99 a 97 de cada 100.
 
 Estos valores corresponden a imágenes del mismo dataset público. No indican cómo se
 comportaría el modelo con imágenes de un hospital.

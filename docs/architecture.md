@@ -47,7 +47,7 @@ flowchart TD
 
 | Verificación | Resultado |
 |---|---|
-| Código de inferencia en local contra la evaluación de test (1.403 imágenes) | Matriz de confusión idéntica |
+| Código de inferencia en local contra la evaluación inicial de test (1.403 imágenes) | Matriz de confusión idéntica |
 | Paquete descargado de S3 ejecutado con PyTorch 2.14 y con 2.6 (1.403 imágenes) | 0 diferencias de clase; diferencia máxima de probabilidad: 0,0000017 |
 | Endpoint contra el resultado local (40 imágenes de test, 10 por clase) | 0 diferencias de clase; diferencia máxima de probabilidad: 0,0000015 |
 | Tiempo de respuesta del endpoint (mediana, desde Argentina) | 0,9 segundos por imagen, incluida la red |

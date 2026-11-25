@@ -98,7 +98,7 @@ python -m scripts.deploy_endpoint borrar            # siempre, al terminar
 
 ## Estado actual
 
-🚧 En desarrollo — Bimestre 2. Ya terminé el EDA, el preprocesamiento, el entrenamiento y la evaluación del modelo: **93,0% de recall promedio sobre test** (1,3% de tumores predichos como "sin tumor"), con una prueba de estrés de brillo que descarta el brillo como señal principal. Detalle en la [model card](docs/model_card.md). El modelo se desplegó en un endpoint de SageMaker el 25/11/2026: respondió igual que en local en las 40 imágenes de prueba, y se eliminó al terminar para no generar costos ([arquitectura](docs/architecture.md)). Queda pendiente el etiquetado manual de secuencias de resonancia, idealmente con un profesional médico.
+🚧 En desarrollo — Bimestre 2. Ya terminé el EDA, el preprocesamiento, el entrenamiento y la evaluación del modelo: **92,5% de recall promedio sobre test** (1,3% de tumores predichos como "sin tumor"), excluidas las imágenes con copia casi idéntica en train, con una prueba de estrés de brillo que descarta el brillo como señal principal. Detalle en la [model card](docs/model_card.md). El modelo se desplegó en un endpoint de SageMaker el 25/11/2026: respondió igual que en local en las 40 imágenes de prueba, y se eliminó al terminar para no generar costos ([arquitectura](docs/architecture.md)). Queda pendiente el etiquetado manual de secuencias de resonancia, idealmente con un profesional médico.
 
 ## Autor
 

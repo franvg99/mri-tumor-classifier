@@ -69,6 +69,11 @@ Ejemplos concretos de esta misma colaboración, no afirmaciones genéricas:
 - **Un faltante que detecté al releer el proyecto.** Al revisar la documentación noté que
   ningún notebook mostraba el modelo, porque el entrenamiento se había ejecutado desde la
   terminal. Esa observación dio origen a `notebooks/03_model_experiments.ipynb`.
+- **Un error de la IA que hubo que corregir.** El deduplicado que implementó comparaba
+  archivos, por lo que dejó copias casi idénticas entre entrenamiento y prueba, y los
+  documentos afirmaban que la prueba era independiente. La propia IA lo detectó al analizar
+  los errores del modelo. Pregunté hasta entender la causa y su efecto, y decidí corregir la
+  evaluación, conservar el modelo y reentrenarlo en AWS solo si se aprueba la cuota.
 - **Cambio de plan en el despliegue.** La IA había planteado el entrenamiento en SageMaker
   como paso previo a publicar. Pregunté por qué no publicar directamente el modelo ya
   entrenado y evaluado. El plan cambió: el despliegue dejó de depender de una cuota que

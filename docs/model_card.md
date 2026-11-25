@@ -17,7 +17,7 @@
 
 - **Fuente:** [Brain Tumor MRI Dataset](https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset)
 - **Clases:** Glioma, Meningioma, Pituitario, Sin tumor
-- **Split:** 70% train / 10% val / 20% test, estratificado por clase, seed fija (`config/config.yaml`). Deduplicado antes de dividir — el EDA encontró 4.72% de duplicados exactos. El test es más grande que el val para acotar el margen de error del recall por clase (~350 imágenes por clase en lugar de ~175); con el backbone congelado, la reducción del train tiene un costo bajo.
+- **Split:** 70% train / 10% val / 20% test, estratificado por clase, seed fija (`config/config.yaml`). Antes de dividir se eliminaron los duplicados exactos (archivos idénticos, 4.72% del dataset). Ese filtro no detecta copias casi idénticas, que quedaron repartidas entre los tres conjuntos (ver [Limitaciones](#limitaciones)). El test es más grande que el val para acotar el margen de error del recall por clase (~350 imágenes por clase en lugar de ~175); con el backbone congelado, la reducción del train tiene un costo bajo.
 
 ## Entrenamiento
 
@@ -32,7 +32,8 @@
 
 Resultados en **validación** (701 imágenes) de la época 15. No reemplazan a las métricas
 de test de la sección siguiente: la validación se usó para elegir la época, por lo que su
-resultado es levemente optimista.
+resultado es levemente optimista. Además, 118 de las 701 (16,8%) tienen una copia casi
+idéntica en train (ver Limitaciones).
 
 | Clase | Recall en validación |
 |---|---|
@@ -60,70 +61,110 @@ Observaciones de las curvas:
 ## Métricas de evaluación
 
 Priorizadas por contexto sanitario (un falso negativo es más costoso que un falso positivo).
-Calculadas sobre el conjunto de **test** (1.403 imágenes, 20% del dataset deduplicado),
-que no se utilizó para entrenar ni para elegir la época. Evaluación del 25/10/2026,
-reproducible con `python -m src.models.evaluate --data-dir <dataset>`.
+Evaluación del 25/11/2026 sobre **1.146 imágenes de test**, reproducible con
+`python -m src.models.evaluate --data-dir <dataset>`.
+
+> **Corrección del 25/11/2026.** La evaluación inicial (25/10/2026) utilizó las 1.403
+> imágenes de test y dio un recall promedio de 93,0%. Al analizar los errores detecté que
+> 257 de ellas (18,3%) tienen una copia casi idéntica en train, que el deduplicado por
+> archivo no detecta. Acertarlas no demuestra que el modelo generalice, por lo que las
+> excluí: el resultado corregido es **92,5%**. El modelo es el mismo. Ver
+> [Efecto de las copias](#efecto-de-las-copias-entre-train-y-test).
 
 | Métrica (macro) | Valor | Justificación |
 |---|---|---|
-| Recall / Sensibilidad | 93,0% | Minimizar falsos negativos (tumores no detectados) |
-| Precisión | 93,3% | Proporción de aciertos entre las predicciones de cada clase |
-| F1-Score | 93,0% | Balance entre precisión y recall por clase |
-| ROC-AUC (one-vs-rest) | 0,990 | Capacidad de discriminación entre clases |
-| Accuracy | 92,9% | Referencia; no es la métrica prioritaria |
+| Recall / Sensibilidad | 92,5% | Minimizar falsos negativos (tumores no detectados) |
+| Precisión | 91,5% | Proporción de aciertos entre las predicciones de cada clase |
+| F1-Score | 91,9% | Balance entre precisión y recall por clase |
+| ROC-AUC (one-vs-rest) | 0,987 | Capacidad de discriminación entre clases |
+| Accuracy | 91,7% | Referencia; no es la métrica prioritaria |
 
-Por clase (margen de error aproximado del recall: ±3 puntos, con ~350 imágenes por clase):
+Por clase (margen de error aproximado del recall: entre ±2 y ±3,5 puntos):
 
 | Clase | Recall | Precisión | F1 | ROC-AUC | Imágenes |
 |---|---|---|---|---|---|
-| Glioma | 86,6% | 96,6% | 91,3% | 0,987 | 357 |
-| Meningioma | 91,6% | 84,5% | 87,9% | 0,978 | 357 |
-| Pituitario | 95,2% | 96,0% | 95,6% | 0,997 | 353 |
-| Sin tumor | 98,8% | 96,0% | 97,4% | 0,998 | 336 |
+| Glioma | 86,7% | 96,8% | 91,5% | 0,984 | 354 |
+| Meningioma | 91,4% | 83,7% | 87,4% | 0,974 | 325 |
+| Pituitario | 95,5% | 96,0% | 95,7% | 0,997 | 352 |
+| Sin tumor | 96,5% | 89,5% | 92,9% | 0,994 | 115 |
+
+La precisión, el F1 y la accuracy dependen de la proporción de cada clase. Como la exclusión
+afecta sobre todo a "Sin tumor", no son directamente comparables con los de la evaluación
+inicial; el recall por clase sí lo es.
 
 Matriz de confusión (filas: clase real; columnas: predicción):
 
 | | Glioma | Meningioma | Pituitario | Sin tumor |
 |---|---|---|---|---|
-| **Glioma** | 309 | 44 | 1 | 3 |
-| **Meningioma** | 8 | 327 | 12 | 10 |
-| **Pituitario** | 2 | 14 | 336 | 1 |
-| **Sin tumor** | 1 | 2 | 1 | 332 |
+| **Glioma** | 307 | 43 | 1 | 3 |
+| **Meningioma** | 7 | 297 | 12 | 9 |
+| **Pituitario** | 2 | 13 | 336 | 1 |
+| **Sin tumor** | 1 | 2 | 1 | 111 |
 
 Lectura de los resultados:
 
-- **El recall de test (93,0%) coincide con el de validación (92,8%):** el modelo
-  generaliza a imágenes no vistas y la elección de la época no infló el resultado.
-- **Confusión principal: glioma predicho como meningioma** (44 casos, 12% de los
-  gliomas), con una asimetría marcada (solo 8 meningiomas predichos como glioma).
-  Explica el recall más bajo de glioma y la precisión más baja de meningioma. Confirma
-  la oscilación entre ambas clases observada en las curvas de entrenamiento. En estos
+- **El recall de test (92,5%) es similar al de validación (92,8%).** La validación también
+  contiene copias de train (ver Limitaciones), por lo que la comparación es orientativa.
+- **Confusión principal: glioma predicho como meningioma** (43 casos, 12% de los
+  gliomas), con una asimetría marcada (solo 7 meningiomas predichos como glioma).
+  Explica el recall más bajo de glioma y la precisión más baja de meningioma. En estos
   casos el tumor se detecta, aunque se clasifica mal su tipo.
-- **Falsos negativos graves (tumor predicho como "Sin tumor"): 14 de 1.067 (1,3%).**
-  10 de los 14 son meningiomas. En validación habían sido 3 de 533 (0,6%); la diferencia
-  es compatible con la variabilidad esperable para conteos tan bajos.
+- **Falsos negativos graves (tumor predicho como "Sin tumor"): 13 de 1.031 (1,3%).**
+  9 de los 13 son meningiomas.
+- **"Sin tumor" se mide sobre solo 115 imágenes**, por lo que su recall tiene un margen de
+  unos ±3,4 puntos.
+
+### Efecto de las copias entre train y test
+
+Considero copia a una imagen de test cuya correlación con alguna de train, en escala de
+grises y a 32×32 píxeles, es de 0,999 o más (`src/data/similitud.py`).
+
+| | Evaluación inicial | Sin copias |
+|---|---|---|
+| Imágenes | 1.403 | 1.146 |
+| Recall promedio | 93,0% | **92,5%** |
+| Recall glioma | 86,6% | 86,7% |
+| Recall meningioma | 91,6% | 91,4% |
+| Recall pituitario | 95,2% | 95,5% |
+| Recall sin tumor | 98,8% | **96,5%** |
+| Tumores predichos como "Sin tumor" | 14 de 1.067 | 13 de 1.031 |
+
+- **Se concentra en "Sin tumor":** 221 de las 257 copias. El modelo acierta el 100% de esas
+  221, contra el 96,5% de las que no tienen copia.
+- **El recall de las clases con tumor casi no varía.**
+- **El umbral es una elección.** Se fijó conociendo los resultados de los cuatro valores, por
+  lo que informo la sensibilidad completa: los umbrales más estrictos bajan el promedio hasta
+  91,8%.
+
+| Umbral | Imágenes | Recall promedio | Recall sin tumor | Tumores predichos como "Sin tumor" |
+|---|---|---|---|---|
+| 0,98 | 997 | 91,8% | 94,7% (57 imágenes) | 13 de 940 |
+| 0,99 | 1.099 | 92,3% | 96,1% (76) | 13 de 1.023 |
+| 0,995 | 1.128 | 92,4% | 96,0% (99) | 13 de 1.029 |
+| **0,999** | **1.146** | **92,5%** | **96,5% (115)** | **13 de 1.031** |
+| Sin excluir | 1.403 | 93,0% | 98,8% (336) | 14 de 1.067 |
 
 ### Prueba de estrés de brillo
 
-Se multiplicó el brillo de todas las imágenes de test por distintos factores para
-verificar si el modelo usa el brillo como atajo (ver Limitaciones). El augmentation de
-train ya varía el brillo entre 0,6 y 1,4, por lo que el rango se extendió hasta 1,8, la
-relación de brillo medio entre "Sin tumor" y glioma medida en el EDA.
+Se multiplicó el brillo de las 1.146 imágenes por distintos factores para verificar si el
+modelo usa el brillo como atajo (ver Limitaciones). El augmentation de train ya varía el
+brillo entre 0,6 y 1,4, por lo que el rango se extendió hasta 1,8, la relación de brillo
+medio entre "Sin tumor" y glioma medida en el EDA.
 
 | Factor de brillo | Tumores predichos como "Sin tumor" | "Sin tumor" reconocidos |
 |---|---|---|
-| 0,50 | 1,4% | 96,7% |
-| 0,75 | 1,4% | 98,2% |
-| 1,00 (original) | 1,3% | 98,8% |
-| 1,25 | 1,8% | 98,2% |
-| 1,50 | 2,5% | 98,8% |
-| 1,80 | 3,7% | 98,8% |
+| 0,50 | 1,3% | 92,2% |
+| 0,75 | 1,4% | 95,7% |
+| 1,00 (original) | 1,3% | 96,5% |
+| 1,25 | 1,6% | 95,7% |
+| 1,50 | 2,2% | 96,5% |
+| 1,80 | 3,2% | 96,5% |
 
 - **El brillo no es la señal principal del modelo.** Oscurecer a la mitad las imágenes
-  sin tumor apenas reduce su reconocimiento (98,8% → 96,7%), y aclarar las imágenes con
-  tumor no provoca un desplazamiento masivo hacia "Sin tumor".
+  sin tumor reduce su reconocimiento de 96,5% a 92,2% (5 imágenes de 115), y aclarar las
+  imágenes con tumor no provoca un desplazamiento masivo hacia "Sin tumor".
 - **Existe una sensibilidad leve, que crece fuera del rango del augmentation.** Con un
-  factor de 1,8, los falsos negativos graves pasan de 1,3% a 3,7% (de 14 a ~40 imágenes).
+  factor de 1,8, los falsos negativos graves pasan de 1,3% a 3,2% (de 13 a 33 imágenes).
   Parte de ese aumento puede deberse a la saturación de píxeles en blanco, que degrada la
   imagen, y no exclusivamente al atajo.
 - **Alcance de la prueba:** solo evalúa el brillo global. No descarta que el modelo use
@@ -132,6 +173,16 @@ relación de brillo medio entre "Sin tumor" y glioma medida en el EDA.
 
 ## Limitaciones
 
+- **Copias casi idénticas repartidas entre train, validación y test.** El deduplicado
+  compara archivos byte a byte, y no detecta una misma imagen guardada de nuevo o con otro
+  contraste o nitidez. La evaluación de test las excluye, pero el modelo se entrenó y su
+  época se eligió con ellas presentes (118 de las 701 imágenes de validación). Además, las
+  imágenes "Sin tumor" realmente distintas son muchas menos que las disponibles: unas 863
+  de 1.681. La corrección completa es rehacer la división y reentrenar, prevista en
+  SageMaker si AWS aprueba la cuota solicitada antes del 02/12/2026.
+- **Sin identificación de pacientes.** El dataset no indica a qué paciente corresponde cada
+  imagen, por lo que cortes distintos de una misma persona pueden estar en train y en test.
+  Excluir las copias no resuelve este punto.
 - **Composición del dataset por clase (hallazgo del EDA, sección 5):** la clase "Sin
   tumor" proviene en su totalidad de una fuente distinta (Br35H) a las tres clases con
   tumor (glioma: figshare; meningioma/pituitario: mayormente SARTAJ). El EDA detectó
@@ -158,7 +209,7 @@ relación de brillo medio entre "Sin tumor" y glioma medida en el EDA.
 - **Confusión entre glioma y meningioma:** el 12% de los gliomas de test se clasifica
   como meningioma. El tumor se detecta, pero el tipo informado no es confiable en esos
   casos.
-- **Falsos negativos graves concentrados en meningioma:** 10 de los 14 tumores de test
+- **Falsos negativos graves concentrados en meningioma:** 9 de los 13 tumores de test
   predichos como "Sin tumor" son meningiomas.
 
 ## Despliegue

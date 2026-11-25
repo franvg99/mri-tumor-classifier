@@ -165,11 +165,12 @@ Conclusiones:
   predecir "sin tumor". Es la forma de comprobar si el modelo final usa el atajo, algo
   que la métrica de test por sí sola no puede mostrar.
 
-**Resultado de la prueba de estrés (25/10/2026):** el brillo global no es la señal
+**Resultado de la prueba de estrés:** el brillo global no es la señal
 principal del modelo. Con las imágenes en su brillo original, el 1,3% de los tumores de
 test se predice como "sin tumor"; al aclararlas un 80% (factor 1,8, la relación de brillo
-medida entre notumor y glioma), esa proporción sube a 3,7%. Al oscurecer a la mitad las
-imágenes sin tumor, su reconocimiento baja apenas de 98,8% a 96,7%. Extendí el rango
+medida entre notumor y glioma), esa proporción sube a 3,2%. Al oscurecer a la mitad las
+imágenes sin tumor, su reconocimiento baja de 96,5% a 92,2% (valores recalculados el
+25/11/2026 sin copias de train, ver punto 7). Extendí el rango
 hasta 1,8 porque el augmentation ya cubre de 0,6 a 1,4 y dentro de ese rango la robustez
 es esperable por construcción. La prueba no descarta otros atajos de la fuente, en
 particular el tipo de secuencia (punto 6). Tabla completa en la
@@ -182,6 +183,8 @@ ninguno cruzando clases distintas, concentrados en notumor (~64% de los duplicad
 otra pista a favor del hallazgo anterior. **Decisión:** deduplico antes del split
 estratificado propio (`preprocessing.split_dataset()`), no del split Training/Testing
 original de Kaggle — este último no me protege contra fuga de datos porque lo descarto.
+
+**Este filtro resultó insuficiente:** solo detecta archivos idénticos (ver punto 7).
 
 ### 6. Las clases difieren en el tipo de secuencia de resonancia (19/10/2026)
 
@@ -218,6 +221,35 @@ basa está en `notebooks/02_preprocessing_debug.ipynb`, sección 4.
   el modelo solo reconoce correctamente las T2/FLAIR, aprendió la secuencia y no la
   ausencia de tumor. Sigue la misma lógica que la prueba de estrés de brillo del punto 4.
 
+### 7. Copias casi idénticas que el deduplicado no detecta (25/11/2026)
+
+Al analizar los falsos negativos de test encontré imágenes distintas como archivo, pero con
+las mismas probabilidades. El origen es que el deduplicado compara archivos byte a byte, y el
+dataset contiene copias guardadas de nuevo o con otro contraste o nitidez. Al dividir al azar,
+una misma imagen pudo quedar en train y su copia en test (fuga de datos).
+
+| Conjunto | Con copia casi idéntica en train | De ellas, notumor |
+|---|---|---|
+| Test (1.403) | 257 (18,3%) | 221 |
+| Validación (701) | 118 (16,8%) | 107 |
+
+**Medición.** Correlación de 0,999 o más entre imágenes reducidas a 32×32 en escala de grises
+(`src/data/similitud.py`). De las 257 de test, 43 son además idénticas píxel a píxel.
+
+**Impacto.** El recall promedio pasa de 93,0% a 92,5%, y el de notumor de 98,8% a 96,5%. Las
+clases con tumor casi no varían. Detalle y sensibilidad al umbral en la
+[model card](model_card.md).
+
+**Decisiones derivadas:**
+
+- `evaluate.py` excluye de test las imágenes con copia en train e informa ambos resultados.
+- Conservo el modelo actual. Excluir las copias de test corrige la medición, pero no el
+  entrenamiento ni la elección de la época.
+- Si AWS aprueba la cuota de Training Jobs antes del 02/12/2026, rehago la división de modo
+  que cada imagen y sus copias queden en un mismo conjunto, y reentreno en SageMaker. En ese
+  caso hay que volver a evaluar el balance de clases (punto 1): notumor tiene alrededor de 863
+  imágenes distintas sobre 1.681.
+
 ## Convenciones de código a respetar
 
 - Ya implementé `src/data/`, `src/models/` y `src/inference/`, y en `scripts/` el
@@ -241,11 +273,12 @@ entorno (venv, kernel de Jupyter, credenciales de Kaggle).
 1. Etiquetado manual de secuencias (T1/T2/FLAIR) sobre una muestra de test, idealmente
    con un profesional médico (punto 6 de los hallazgos).
 2. Tests de `train.py` (lógica de early stopping y congelamiento de BatchNorm).
-3. Entrenamiento en SageMaker (opcional): depende de la cuota solicitada a AWS.
+3. Rehacer la división y reentrenar en SageMaker (punto 7 de los hallazgos), si AWS aprueba
+   la cuota antes del 02/12/2026.
 
 La evaluación sobre test (métricas por clase, matriz de confusión, ROC-AUC y prueba de
-estrés de brillo) quedó completa el 25/10/2026; los resultados están en la
-[model card](model_card.md).
+estrés de brillo) se completó el 25/10/2026 y se corrigió el 25/11/2026; los resultados están
+en la [model card](model_card.md).
 
 ---
 
