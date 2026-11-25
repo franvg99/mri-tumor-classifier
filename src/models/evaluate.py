@@ -16,6 +16,11 @@ El conjunto de test se usa solo para medir: ninguna decisión sobre el modelo
 (época, hiperparámetros, umbrales) se toma mirando su resultado, porque dejaría
 de ser una estimación limpia del desempeño.
 
+Las métricas principales excluyen las imágenes de test que tienen una copia casi
+idéntica en train (ver src/data/similitud.py): acertarlas no demuestra que el
+modelo generalice. También se informan las del test completo y la sensibilidad al
+umbral de similitud, para que el efecto de la exclusión quede a la vista.
+
 Uso local:
     python -m src.models.evaluate --data-dir <carpeta del dataset de Kaggle>
 """
@@ -45,6 +50,7 @@ from src.data.augmentation import get_eval_pipeline
 from src.data.dataset import CLASE_A_INDICE, CLASES, MRIDataset
 from src.data.eda import ETIQUETAS, listar_imagenes
 from src.data.preprocessing import split_dataset
+from src.data.similitud import UMBRAL_COPIA, similitud_maxima
 from src.models.architecture import build_model
 
 INDICE_NOTUMOR = CLASE_A_INDICE["notumor"]
@@ -209,6 +215,33 @@ def plot_brightness_stress_test(df_estres):
     return fig
 
 
+def sensibilidad_al_umbral(y_true, y_pred, similitud, umbrales=(0.98, 0.99, 0.995, 0.999)):
+    """Recalcula el recall excluyendo las copias según distintos umbrales.
+
+    Args:
+        similitud: correlación de cada imagen de test con la más parecida de train.
+
+    Returns:
+        DataFrame con una fila por umbral y una última con el test completo.
+    """
+    filas = []
+    for umbral in (*umbrales, None):
+        conservar = np.ones(len(y_true), dtype=bool) if umbral is None else similitud < umbral
+        m = compute_metrics(y_true[conservar], y_pred[conservar])
+        filas.append(
+            {
+                "umbral": "sin excluir" if umbral is None else umbral,
+                "imagenes": int(conservar.sum()),
+                "recall_macro": m["recall_macro"],
+                **{f"recall_{c}": m["por_clase"][c]["recall"] for c in CLASES},
+                "n_notumor": m["por_clase"]["notumor"]["soporte"],
+                "tumores_como_sanos": m["tumores_como_sanos"],
+                "tumores_total": m["tumores_total"],
+            }
+        )
+    return pd.DataFrame(filas)
+
+
 def cargar_modelo(model_dir):
     """Reconstruye la arquitectura y le carga los pesos entrenados de `model.pth`."""
     model = build_model(num_classes=len(CLASES), pretrained=False)
@@ -228,22 +261,35 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     # Mismo split que en train.py (misma seed): test nunca se usó para entrenar ni elegir.
-    _, _, df_test = split_dataset(listar_imagenes(args.data_dir), seed=args.seed)
+    df_train, _, df_test = split_dataset(listar_imagenes(args.data_dir), seed=args.seed)
     loader_test = DataLoader(MRIDataset(df_test, get_eval_pipeline()), batch_size=64)
 
     model = cargar_modelo(args.model_dir)
     y_true, y_pred, y_proba = predecir(model, loader_test)
+
+    similitud = similitud_maxima(df_test["path"], df_train["path"])
+    nuevas = similitud < UMBRAL_COPIA
+    metricas_completo = compute_metrics(y_true, y_pred, y_proba)
+    df_sensibilidad = sensibilidad_al_umbral(y_true, y_pred, similitud)
+
+    y_true, y_pred, y_proba = y_true[nuevas], y_pred[nuevas], y_proba[nuevas]
+    df_test = df_test[nuevas].reset_index(drop=True)
     metricas = compute_metrics(y_true, y_pred, y_proba)
 
     os.makedirs(args.output_dir, exist_ok=True)
-    with open(os.path.join(args.output_dir, "metricas_test.json"), "w", encoding="utf-8") as f:
-        json.dump(metricas, f, indent=2, ensure_ascii=False)
+    for nombre, contenido in (
+        ("metricas_test.json", metricas),
+        ("metricas_test_completo.json", metricas_completo),
+    ):
+        with open(os.path.join(args.output_dir, nombre), "w", encoding="utf-8") as f:
+            json.dump(contenido, f, indent=2, ensure_ascii=False)
+    df_sensibilidad.to_csv(os.path.join(args.output_dir, "sensibilidad_copias.csv"), index=False)
 
     fig = plot_confusion_matrix(y_true, y_pred, [ETIQUETAS[c] for c in CLASES])
     fig.savefig(os.path.join(args.output_dir, "matriz_confusion_test.png"), dpi=120)
     plt.close(fig)
 
-    print(f"test: {len(y_true)} imágenes")
+    print(f"test: {len(y_true)} imágenes (excluidas {(~nuevas).sum()} con copia en train)")
     for clase, m in metricas["por_clase"].items():
         print(
             f"{clase:<11} recall {m['recall']:.3f} | precisión {m['precision']:.3f} | "
@@ -254,6 +300,9 @@ def main(argv=None):
         f"F1 {metricas['f1_macro']:.3f} | ROC-AUC {metricas['roc_auc_macro']:.3f}"
     )
     print(f"tumores como sanos: {metricas['tumores_como_sanos']}/{metricas['tumores_total']}")
+
+    print("\nSensibilidad al umbral de similitud:")
+    print(df_sensibilidad.round(3).to_string(index=False))
 
     df_estres = brightness_stress_test(model, df_test)
     df_estres.to_csv(os.path.join(args.output_dir, "estres_brillo_test.csv"), index=False)

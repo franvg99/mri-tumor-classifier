@@ -7,7 +7,7 @@ import torch
 from PIL import Image
 
 from src.models.architecture import build_model
-from src.models.evaluate import brightness_stress_test, compute_metrics
+from src.models.evaluate import brightness_stress_test, compute_metrics, sensibilidad_al_umbral
 
 
 @pytest.fixture(scope="module")
@@ -68,6 +68,20 @@ def test_compute_metrics_roc_auc_perfecto():
     y_proba = np.eye(4) * 0.7 + 0.075  # 0.775 en la clase real, 0.075 en el resto
     m = compute_metrics(y_true, y_proba.argmax(axis=1), y_proba)
     assert m["roc_auc_macro"] == 1.0
+
+
+def test_sensibilidad_al_umbral_excluye_las_copias():
+    """La imagen mal clasificada como sana no es copia: se conserva en ambos casos."""
+    y_true = np.array([0, 1, 2, 3, 3, 0])
+    y_pred = np.array([0, 1, 2, 3, 0, 3])
+    similitud = np.array([0.5, 0.5, 0.5, 1.0, 0.5, 0.5])  # solo el notumor acertado es copia
+
+    df = sensibilidad_al_umbral(y_true, y_pred, similitud, umbrales=(0.999,))
+
+    assert df["umbral"].tolist() == [0.999, "sin excluir"]
+    assert df["imagenes"].tolist() == [5, 6]
+    assert df["recall_notumor"].tolist() == [0.0, 0.5]
+    assert df["tumores_como_sanos"].tolist() == [1, 1]
 
 
 def test_brightness_stress_test_una_fila_por_factor(modelo, tmp_path):
