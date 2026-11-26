@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validación de secuencias de resonancia</title>
+<!--
+  Plantilla de la página de validación de secuencias.
+  scripts/armar_validacion_secuencias.py reemplaza el marcador de IMAGENES (más abajo)
+  por las 50 imágenes de la muestra, cada una con su número y sin ningún otro dato.
+  Fondo oscuro a propósito: es el entorno habitual de lectura de imágenes radiológicas
+  y evita que un marco claro altere la percepción del contraste.
+-->
+<style>
+  :root {
+    --fondo: #101214;
+    --panel: #1a1d20;
+    --borde: #2d3237;
+    --texto: #e7e9eb;
+    --tenue: #9ba2a9;
+    --acento: #5aa9ff;
+    --t1: #8db7ff;
+    --t1c: #f4c25b;
+    --t2: #6fd6b5;
+    --flair: #df98ec;
+    --indeterminada: #a3a9b0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  kbd {
+    display: inline-block;
+    min-width: 1.6em;
+    padding: 0 5px;
+    border: 1px solid var(--borde);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    font: 12px/1.6 ui-monospace, Consolas, monospace;
+    text-align: center;
+    color: var(--tenue);
+  }
+
+  /* Encabezado fijo con el avance y la descarga */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    padding: 12px 24px;
+    background: rgba(16, 18, 20, 0.96);
+    border-bottom: 1px solid var(--borde);
+  }
+  h1 { margin: 0; font-size: 17px; font-weight: 600; }
+  .progreso {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--tenue);
+    font-variant-numeric: tabular-nums;
+  }
+  .barra { flex: 1; height: 6px; background: var(--borde); border-radius: 3px; overflow: hidden; }
+  .barra > div { height: 100%; width: 0; background: var(--acento); transition: width 0.2s; }
+  .boton {
+    padding: 6px 14px;
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+  }
+  .boton:hover { border-color: var(--tenue); }
+  .boton.primario { background: var(--acento); border-color: var(--acento); color: #07121e; font-weight: 600; }
+  .aviso { color: var(--tenue); font-size: 13px; }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 20px 24px 48px; }
+
+  /* Instrucciones */
+  details.instrucciones {
+    margin-bottom: 20px;
+    padding: 14px 20px;
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+  }
+  details.instrucciones summary { cursor: pointer; font-weight: 600; }
+  details.instrucciones p { margin: 10px 0 6px; }
+  details.instrucciones ul { margin: 0; padding-left: 20px; color: var(--tenue); }
+  details.instrucciones li { margin: 3px 0; }
+
+  /* Grilla de miniaturas: 10 por fila */
+  .grilla { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; }
+  .celda {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    border: 2px solid var(--borde);
+    border-radius: 6px;
+  }
+  .celda:hover { border-color: var(--tenue); }
+  .celda:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  .celda img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .celda .num {
+    position: absolute;
+    top: 3px;
+    left: 6px;
+    font-size: 11px;
+    color: var(--tenue);
+    text-shadow: 0 0 3px #000, 0 0 3px #000;
+  }
+  .celda .nota { position: absolute; top: 3px; right: 6px; font-size: 11px; color: var(--texto); text-shadow: 0 0 3px #000; }
+  .celda .etiqueta {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0b0d0f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .celda.respondida { border-color: var(--color); }
+  .celda.respondida .etiqueta { background: var(--color); }
+  @media (max-width: 900px) { .grilla { grid-template-columns: repeat(5, 1fr); } }
+
+  /* Visor de una imagen */
+  .visor { position: fixed; inset: 0; z-index: 10; display: none; background: #000; }
+  .visor.abierto { display: grid; grid-template-columns: 1fr 340px; }
+  .visor .lienzo { position: relative; display: flex; align-items: center; justify-content: center; padding: 24px 64px; }
+  /* Ocupa todo el espacio disponible: las imágenes chicas también se ven grandes. */
+  .visor .lienzo img { width: 100%; height: calc(100vh - 48px); object-fit: contain; }
+  .flecha {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 64px;
+    background: transparent;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    font-size: 22px;
+    color: var(--tenue);
+  }
+  .flecha:hover { color: var(--texto); border-color: var(--tenue); }
+  .flecha:disabled { visibility: hidden; }
+  .flecha.izq { left: 12px; }
+  .flecha.der { right: 12px; }
+  .visor aside {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    overflow-y: auto;
+    background: var(--panel);
+    border-left: 1px solid var(--borde);
+  }
+  .visor h2 { margin: 0; font-size: 18px; }
+  .visor .posicion { color: var(--tenue); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .opciones { display: flex; flex-direction: column; gap: 6px; }
+  .opcion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    text-align: left;
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+  }
+  .opcion:hover { border-color: var(--tenue); }
+  .opcion .punto { width: 10px; height: 10px; border-radius: 50%; background: var(--color); flex: none; }
+  .opcion span.texto { flex: 1; }
+  .opcion.elegida { border-color: var(--color); box-shadow: inset 4px 0 0 var(--color); font-weight: 600; }
+  label.campo { display: flex; flex-direction: column; gap: 6px; color: var(--tenue); font-size: 13px; }
+  textarea {
+    min-height: 84px;
+    padding: 8px 10px;
+    resize: vertical;
+    font: inherit;
+    color: var(--texto);
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+  }
+  textarea:focus { outline: none; border-color: var(--acento); }
+  label.casilla { display: flex; align-items: center; gap: 8px; color: var(--tenue); font-size: 13px; }
+  .navegacion { display: flex; gap: 8px; margin-top: auto; }
+  .navegacion .boton { flex: 1; }
+  .atajos { color: var(--tenue); font-size: 12px; }
+  @media (max-width: 900px) {
+    .visor.abierto { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; }
+    .visor .lienzo img { height: calc(55vh - 32px); }
+    .visor aside { border-left: none; border-top: 1px solid var(--borde); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Validación de secuencias de resonancia</h1>
+  <div class="progreso">
+    <span id="contador">0 de 0</span>
+    <div class="barra"><div id="barra"></div></div>
+  </div>
+  <span class="aviso" id="aviso"></span>
+  <button class="boton primario" id="descargar">Descargar resultados</button>
+</header>
+
+<main>
+  <details class="instrucciones" open>
+    <summary>Instrucciones</summary>
+    <p>
+      Gracias por colaborar. La tarea consiste en identificar la <strong>secuencia</strong> de cada
+      imagen. No hace falta diagnosticar ni buscar lesiones. Las imágenes provienen de un dataset
+      público y están identificadas solo con un número.
+    </p>
+    <ul>
+      <li>Hacé clic en una imagen para verla en grande.</li>
+      <li>Elegí la secuencia con los botones o con las teclas <kbd>1</kbd> a <kbd>5</kbd>. La página pasa sola a la siguiente imagen.</li>
+      <li>Si la imagen no permite decidir, elegí «No se puede determinar».</li>
+      <li>El comentario es opcional. Para agregarlo, escribilo antes de elegir la secuencia o volvé a la imagen con <kbd>←</kbd>.</li>
+      <li>El avance se guarda en este navegador: podés cerrar la página y continuar más tarde.</li>
+      <li>Al terminar, tocá «Descargar resultados» y enviá el archivo descargado.</li>
+    </ul>
+  </details>
+
+  <div class="grilla" id="grilla"></div>
+</main>
+
+<div class="visor" id="visor" role="dialog" aria-modal="true" aria-labelledby="visor-titulo">
+  <div class="lienzo">
+    <button class="flecha izq" id="anterior" aria-label="Imagen anterior">‹</button>
+    <img id="visor-imagen" alt="">
+    <button class="flecha der" id="siguiente" aria-label="Imagen siguiente">›</button>
+  </div>
+  <aside>
+    <div>
+      <h2 id="visor-titulo"></h2>
+      <div class="posicion" id="visor-posicion"></div>
+    </div>
+    <div class="opciones" id="opciones"></div>
+    <label class="campo">
+      Comentario (opcional)
+      <textarea id="comentario" placeholder="Por ejemplo: dudosa entre T1 y T1 con contraste"></textarea>
+    </label>
+    <label class="casilla">
+      <input type="checkbox" id="autoavance" checked>
+      Pasar a la siguiente al elegir
+    </label>
+    <div class="navegacion">
+      <button class="boton" id="cerrar">Volver a la grilla</button>
+    </div>
+    <div class="atajos">
+      <kbd>1</kbd>–<kbd>5</kbd> elegir · <kbd>←</kbd> <kbd>→</kbd> moverse · <kbd>Esc</kbd> volver a la grilla
+    </div>
+  </aside>
+</div>
+
+<script>
+  // Lista de {id, src}. La completa el script de Python; en la plantilla está vacía.
+  const IMAGENES = /*__IMAGENES__*/[];
+
+  const OPCIONES = [
+    { codigo: "t1", texto: "T1", color: "var(--t1)" },
+    { codigo: "t1c", texto: "T1 con contraste", color: "var(--t1c)" },
+    { codigo: "t2", texto: "T2", color: "var(--t2)" },
+    { codigo: "flair", texto: "FLAIR", color: "var(--flair)" },
+    { codigo: "indeterminada", texto: "No se puede determinar", color: "var(--indeterminada)" },
+  ];
+  const POR_CODIGO = Object.fromEntries(OPCIONES.map(o => [o.codigo, o]));
+  const CLAVE_GUARDADO = "validacion_secuencias_v1";
+
+  // Respuestas: { img_01: { secuencia: "t2", comentario: "..." }, ... }
+  let respuestas = {};
+  try { respuestas = JSON.parse(localStorage.getItem(CLAVE_GUARDADO)) || {}; } catch (e) { respuestas = {}; }
+
+  function guardar() {
+    try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(respuestas)); } catch (e) { /* sin guardado local */ }
+  }
+
+  const $ = id => document.getElementById(id);
+  let actual = -1;  // índice de la imagen abierta en el visor; -1 si está cerrado
+
+  // ---------- Grilla ----------
+  function armarGrilla() {
+    const grilla = $("grilla");
+    IMAGENES.forEach((imagen, i) => {
+      const celda = document.createElement("button");
+      celda.className = "celda";
+      celda.dataset.indice = i;
+      celda.setAttribute("aria-label", imagen.id);
+      celda.innerHTML = '<img alt=""><span class="num"></span><span class="nota"></span><span class="etiqueta"></span>';
+      celda.querySelector("img").src = imagen.src;
+      celda.querySelector(".num").textContent = imagen.id.replace("img_", "");
+      celda.addEventListener("click", () => abrir(i));
+      grilla.appendChild(celda);
+    });
+    IMAGENES.forEach((_, i) => actualizarCelda(i));
+    actualizarProgreso();
+  }
+
+  function actualizarCelda(i) {
+    const celda = $("grilla").children[i];
+    const r = respuestas[IMAGENES[i].id] || {};
+    const opcion = POR_CODIGO[r.secuencia];
+    celda.classList.toggle("respondida", Boolean(opcion));
+    celda.style.setProperty("--color", opcion ? opcion.color : "");
+    celda.querySelector(".etiqueta").textContent = opcion ? opcion.texto : "";
+    celda.querySelector(".nota").textContent = r.comentario ? "✎" : "";
+  }
+
+  function respondidas() {
+    return IMAGENES.filter(im => respuestas[im.id] && respuestas[im.id].secuencia).length;
+  }
+
+  function actualizarProgreso() {
+    const n = respondidas(), total = IMAGENES.length;
+    $("contador").textContent = `${n} de ${total} respondidas`;
+    $("barra").style.width = total ? `${(100 * n) / total}%` : "0";
+  }
+
+  // ---------- Visor ----------
+  function armarOpciones() {
+    OPCIONES.forEach((o, k) => {
+      const boton = document.createElement("button");
+      boton.className = "opcion";
+      boton.dataset.codigo = o.codigo;
+      boton.style.setProperty("--color", o.color);
+      boton.innerHTML = '<span class="punto"></span><span class="texto"></span><kbd></kbd>';
+      boton.querySelector(".texto").textContent = o.texto;
+      boton.querySelector("kbd").textContent = k + 1;
+      boton.addEventListener("click", () => elegir(o.codigo));
+      $("opciones").appendChild(boton);
+    });
+  }
+
+  function abrir(i) {
+    actual = i;
+    const imagen = IMAGENES[i];
+    const r = respuestas[imagen.id] || {};
+    $("visor-imagen").src = imagen.src;
+    $("visor-imagen").alt = imagen.id;
+    $("visor-titulo").textContent = imagen.id;
+    $("visor-posicion").textContent = `Imagen ${i + 1} de ${IMAGENES.length}`;
+    $("comentario").value = r.comentario || "";
+    document.querySelectorAll(".opcion").forEach(b => b.classList.toggle("elegida", b.dataset.codigo === r.secuencia));
+    $("anterior").disabled = i === 0;
+    $("siguiente").disabled = i === IMAGENES.length - 1;
+    $("visor").classList.add("abierto");
+  }
+
+  function cerrar() {
+    if (actual >= 0) $("grilla").children[actual].focus();
+    actual = -1;
+    $("visor").classList.remove("abierto");
+  }
+
+  function mover(delta) {
+    const destino = actual + delta;
+    if (destino >= 0 && destino < IMAGENES.length) abrir(destino);
+  }
+
+  function respuestaActual() {
+    const id = IMAGENES[actual].id;
+    respuestas[id] = respuestas[id] || { secuencia: "", comentario: "" };
+    return respuestas[id];
+  }
+
+  function elegir(codigo) {
+    respuestaActual().secuencia = codigo;
+    guardar();
+    actualizarCelda(actual);
+    actualizarProgreso();
+    document.querySelectorAll(".opcion").forEach(b => b.classList.toggle("elegida", b.dataset.codigo === codigo));
+    if ($("autoavance").checked && actual < IMAGENES.length - 1) {
+      const desde = actual;
+      // Pausa breve para que se vea la opción marcada antes de pasar a la siguiente.
+      setTimeout(() => { if (actual === desde) mover(1); }, 180);
+    }
+  }
+
+  $("comentario").addEventListener("input", e => {
+    respuestaActual().comentario = e.target.value;
+    guardar();
+    actualizarCelda(actual);
+  });
+
+  $("anterior").addEventListener("click", () => mover(-1));
+  $("siguiente").addEventListener("click", () => mover(1));
+  $("cerrar").addEventListener("click", cerrar);
+
+  document.addEventListener("keydown", e => {
+    if (actual < 0) return;
+    if (e.target.tagName === "TEXTAREA") {
+      if (e.key === "Escape") e.target.blur();  // sale del comentario sin cerrar el visor
+      return;
+    }
+    if (e.key >= "1" && e.key <= String(OPCIONES.length)) elegir(OPCIONES[Number(e.key) - 1].codigo);
+    else if (e.key === "ArrowLeft") mover(-1);
+    else if (e.key === "ArrowRight") mover(1);
+    else if (e.key === "Escape") cerrar();
+    else return;
+    e.preventDefault();
+  });
+
+  // ---------- Descarga ----------
+  function celdaCsv(valor) {
+    return `"${String(valor).replace(/"/g, '""')}"`;
+  }
+
+  $("descargar").addEventListener("click", () => {
+    const filas = [["id", "secuencia", "comentario"]];
+    IMAGENES.forEach(im => {
+      const r = respuestas[im.id] || {};
+      filas.push([im.id, r.secuencia || "", (r.comentario || "").trim()]);
+    });
+    // El BOM inicial permite que Excel lea bien las tildes.
+    const csv = "﻿" + filas.map(f => f.map(celdaCsv).join(",")).join("\r\n");
+    const enlace = document.createElement("a");
+    enlace.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    enlace.download = "validacion_secuencias_respuestas.csv";
+    enlace.click();
+    setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
+
+    const faltan = IMAGENES.length - respondidas();
+    $("aviso").textContent = faltan
+      ? `Se descargó con ${faltan} imágenes sin responder.`
+      : "Resultados descargados. ¡Gracias!";
+  });
+
+  armarOpciones();
+  armarGrilla();
+</script>
+</body>
+</html>
